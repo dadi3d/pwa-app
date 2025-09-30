@@ -13,8 +13,8 @@ RUN npm install
 # Copy source code
 COPY . .
 
-# Build argument for server URL
-ARG VITE_SERVER_URL=http://localhost:3001
+# Build argument for server URL (must be provided at build time)
+ARG VITE_SERVER_URL
 
 # Set environment variable for build
 ENV VITE_SERVER_URL=$VITE_SERVER_URL
