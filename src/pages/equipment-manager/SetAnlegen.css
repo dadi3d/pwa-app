@@ -1,0 +1,13 @@
+.modal-style {
+     display: none;
+     position: fixed;
+     top: 20%;
+     left: 50%;
+     transform: translateX(-50%);
+     background: #ff002f;
+     padding: 1rem;
+     border: 1px solid #ccc;
+     z-index: 1000;
+     min-width: 300px;
+     color: aqua;
+   }
