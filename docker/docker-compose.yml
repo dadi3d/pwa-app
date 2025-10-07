@@ -17,5 +17,11 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    networks:
+      - medienausleihe-network
 
-# Kein externes Netzwerk - Standard Docker-Netzwerk
+networks:
+  medienausleihe-network:
+    name: medienausleihe-network
+    driver: bridge
+    external: true
