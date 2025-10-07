@@ -4,20 +4,18 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        # Diese Variable wird zur Build-Zeit an das Dockerfile übergeben
-        VITE_SERVER_URL: ${SERVER_URL:-http://localhost:3001}
+        # Build-time Variablen für Frontend-Konfiguration
+        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://localhost:3001}
+        VITE_GOOGLE_CALENDAR_API_KEY: ${VITE_GOOGLE_CALENDAR_API_KEY:-}
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+        VITE_APP_NAME: ${VITE_APP_NAME:-Medienausleihe OTH-AW}
+        VITE_APP_SHORT_NAME: ${VITE_APP_SHORT_NAME:-Medienausleihe}
+        VITE_APP_DESCRIPTION: ${VITE_APP_DESCRIPTION:-Medienausleihe System der OTH Amberg-Weiden}
+    container_name: medienausleihe-app
     ports:
-      - "8080:80"
+      - "${APP_PORT:-8080}:80"
     environment:
-      # Optional: Weitere Umgebungsvariablen für das Container Runtime
       - NODE_ENV=production
-    # Optional: Volumes für Entwicklung
-    # volumes:
-    #   - .:/app
-    #   - /app/node_modules
     restart: unless-stopped
 
-# Optional: Netzwerk-Konfiguration
-# networks:
-#   default:
-#     name: medienausleihe-network
+# Kein externes Netzwerk - Standard Docker-Netzwerk

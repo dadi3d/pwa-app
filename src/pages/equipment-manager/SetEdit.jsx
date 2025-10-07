@@ -105,7 +105,9 @@ const SetEdit = ({ setId: propSetId }) => {
     
     if (!window.confirm(confirmMessage)) return;
     try {
+      // Set löschen (Server entfernt automatisch die Set-ID aus den fileDatas)
       await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${id}`, { method: "DELETE" });
+      
       alert("Set und alle verbundenen Produkte wurden gelöscht!");
       if (typeof window.history.go === "function") {
         window.history.go(-1);

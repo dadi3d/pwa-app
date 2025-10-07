@@ -115,7 +115,7 @@ function App() {
         rel="stylesheet"
         href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
       />
-      <div style={{ paddingBottom: '4.5rem' }}>
+      <div className="p-2 pb-[4.5rem]">
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/home" element={<Home />} />

@@ -24,6 +24,11 @@ export default function SetKopieren() {
   const [productCustomerIds, setProductCustomerIds] = useState([]);
   const [rooms, setRooms] = useState([]);
   
+  // Thumbnail States
+  const [availableThumbnails, setAvailableThumbnails] = useState([]);
+  const [selectedThumbnail, setSelectedThumbnail] = useState(null);
+  const [currentThumbnail, setCurrentThumbnail] = useState(null);
+  
   // UI States
   const [loading, setLoading] = useState(true);
   const [copying, setCopying] = useState(false);
@@ -93,6 +98,9 @@ export default function SetKopieren() {
       const setData = await setRes.json();
       setOriginalSet(setData);
 
+      // Thumbnails laden
+      await loadThumbnails(setData);
+
       // Neue Set-Nummer ermitteln
       const nextNumberRes = await fetch(
         `${MAIN_VARIABLES.SERVER_URL}/api/sets/next-set-number?brand=${setData.manufacturer._id}&setName=${setData.set_name._id}&setRelation=${setData.set_relation._id}`
@@ -146,6 +154,46 @@ export default function SetKopieren() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadThumbnails(setData) {
+    try {
+      // Alle verfügbaren File-Daten laden (wie in SetAnlegen.jsx)
+      const allFilesRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data`);
+      const allFiles = await allFilesRes.json();
+      
+      // Nur Bilder filtern
+      const thumbnails = allFiles.filter(file => 
+        file.filePath && file.filePath.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+      );
+      
+      setAvailableThumbnails(thumbnails);
+      
+      // Aktuelles Thumbnail des ursprünglichen Sets finden
+      const currentThumb = thumbnails.find(thumb => 
+        thumb.sets && thumb.sets.some(set => set._id === setData._id) && thumb.isThumbnail
+      );
+      
+      if (currentThumb) {
+        setCurrentThumbnail(currentThumb);
+        setSelectedThumbnail(currentThumb._id);
+      }
+      
+    } catch (error) {
+      console.error("Fehler beim Laden der Thumbnails:", error);
+    }
+  }
+
+  // Hilfsfunktion: passende Files filtern (wie in SetAnlegen.jsx)
+  function getMatchingThumbnails() {
+    if (!originalSet) return [];
+    
+    return availableThumbnails.filter(fd =>
+      fd.set_relation?._id === originalSet.set_relation?._id &&
+      fd.manufacturer?._id === originalSet.manufacturer?._id &&
+      fd.set_name?._id === originalSet.set_name?._id &&
+      fd.filePath?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
+    );
   }
 
   function updateProduct(productId, field, value) {
@@ -423,6 +471,32 @@ export default function SetKopieren() {
 
       const newSet = await setResponse.json();
       const newSetId = newSet._id;
+
+      // Thumbnail zuweisen, falls eines ausgewählt ist
+      if (selectedThumbnail) {
+        try {
+          const selectedThumb = availableThumbnails.find(thumb => thumb._id === selectedThumbnail);
+          if (selectedThumb) {
+            // FileData für das neue Set aktualisieren
+            const updatedSets = selectedThumb.sets ? [...selectedThumb.sets.map(s => s._id), newSetId] : [newSetId];
+            
+            await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data/${selectedThumbnail}`, {
+              method: "PUT",
+              headers: {
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                ...selectedThumb,
+                sets: updatedSets,
+                isThumbnail: true
+              })
+            });
+          }
+        } catch (error) {
+          console.error("Fehler beim Zuweisen des Thumbnails:", error);
+          // Thumbnail-Fehler soll das Kopieren nicht abbrechen
+        }
+      }
 
       // Dann alle Produkte (kopierte + neue) einzeln erstellen
       let createdProducts = 0;
@@ -733,6 +807,108 @@ export default function SetKopieren() {
                 <div className="info-item">
                   <div className="info-label">Kategorie</div>
                   <div className="info-value">{originalSet.category?.name?.de}</div>
+                </div>
+              </div>
+
+              {/* Thumbnail-Auswahl */}
+              <div style={{ marginTop: "1.5rem" }}>
+                <h4 style={{ marginBottom: "1rem", color: "#2a3b4c" }}>📷 Thumbnail auswählen</h4>
+                {currentThumbnail && (
+                  <div style={{ 
+                    marginBottom: "1rem", 
+                    padding: "0.75rem", 
+                    background: "#e8f4fd", 
+                    borderRadius: "8px", 
+                    border: "1px solid #bee5eb",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem"
+                  }}>
+                    <img 
+                      src={`${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(currentThumbnail.filePath)}`}
+                      alt="Aktuelles Thumbnail"
+                      style={{
+                        width: "40px",
+                        height: "40px",
+                        objectFit: "cover",
+                        borderRadius: "4px",
+                        border: "1px solid #ccc"
+                      }}
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                      }}
+                    />
+                    <div>
+                      <strong>Aktuelles Thumbnail:</strong> {currentThumbnail.filePath?.split('/').pop()}
+                    </div>
+                  </div>
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: "1rem", maxHeight: "300px", overflowY: "auto" }}>
+                  <div 
+                    onClick={() => setSelectedThumbnail(null)}
+                    style={{
+                      border: selectedThumbnail === null ? "3px solid #646cff" : "2px solid #ddd",
+                      borderRadius: "8px",
+                      padding: "0.5rem",
+                      textAlign: "center",
+                      cursor: "pointer",
+                      background: "#f8f9fa",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      minHeight: "100px"
+                    }}
+                  >
+                    <div style={{ fontSize: "2rem", marginBottom: "0.25rem" }}>🚫</div>
+                    <div style={{ fontSize: "0.8rem", color: "#666" }}>Kein Thumbnail</div>
+                  </div>
+                  {getMatchingThumbnails().map(thumbnail => (
+                    <div 
+                      key={thumbnail._id}
+                      onClick={() => setSelectedThumbnail(thumbnail._id)}
+                      style={{
+                        border: selectedThumbnail === thumbnail._id ? "3px solid #646cff" : "2px solid #ddd",
+                        borderRadius: "8px",
+                        overflow: "hidden",
+                        cursor: "pointer",
+                        transition: "all 0.2s"
+                      }}
+                    >
+                      <img 
+                        src={`${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(thumbnail.filePath)}`}
+                        alt="Thumbnail"
+                        style={{
+                          width: "100%",
+                          height: "80px",
+                          objectFit: "cover"
+                        }}
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                      <div style={{ 
+                        display: "none", 
+                        alignItems: "center", 
+                        justifyContent: "center", 
+                        height: "80px", 
+                        background: "#f8f9fa",
+                        fontSize: "2rem"
+                      }}>
+                        📷
+                      </div>
+                      <div style={{ 
+                        padding: "0.25rem", 
+                        fontSize: "0.7rem", 
+                        textAlign: "center",
+                        background: selectedThumbnail === thumbnail._id ? "#646cff" : "#fff",
+                        color: selectedThumbnail === thumbnail._id ? "white" : "#333"
+                      }}>
+                        {thumbnail.filePath?.split('/').pop()?.substring(0, 15) || 'Thumbnail'}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>

@@ -1,82 +1,74 @@
 import { useEffect, useState } from 'react';
 import { useAuth, fetchUserData } from './services/auth';
-import { MAIN_VARIABLES } from '../config.js';
-
-const mockNews = [
-  {
-    id: 1,
-    title: 'Willkommen zur Medienausleihe!',
-    date: '2025-05-20',
-    content: 'Die neue App ist jetzt online. Viel Spaß beim Ausleihen!'
-  },
-  {
-    id: 2,
-    title: 'Neue Geräte verfügbar',
-    date: '2025-05-18',
-    content: 'Ab sofort stehen neue Kameras und Mikrofone zur Verfügung.'
-  }
-];
+import SettingsService from './services/Settings.js';
 
 export default function Home() {
-  const [news, setNews] = useState([]);
+  const [homePageText, setHomePageText] = useState('');
+  const [isLoadingText, setIsLoadingText] = useState(true);
   const [userId, setUserId] = useState('');
   const [userRole, setUserRole] = useState('student');
   const token = useAuth(state => state.token);
-  const setAuth = useAuth(state => state.setAuth);
-
-  const [version, setVersion] = useState("Lade...");
-
-    useEffect(() => {
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/version`)
-            .then((response) => response.json())
-            .then((data) => {
-                setVersion(data.version + " " + data.buildDate);
-            })
-            .catch(() => {
-                setVersion("Fehler");
-            });
-    }, []);
-
 
   useEffect(() => {
-    setNews(mockNews);
+    loadHomePageText();
     fetchUserId();
   }, [token]);
 
   // Benutzer-ID aus JWT holen
-    async function fetchUserId() {
-      try {
-        const userData = await fetchUserData();
-        if(userData) {
-          setUserId(userData.id); // oder userData.name, je nach Backend
-          if(userData.role) {
-            setUserRole(userData.role);
-          }
+  async function fetchUserId() {
+    try {
+      const userData = await fetchUserData();
+      if(userData) {
+        setUserId(userData.id); // oder userData.name, je nach Backend
+        if(userData.role) {
+          setUserRole(userData.role);
         }
-      } catch (err) {
-        setUserId('');
       }
+    } catch (err) {
+      setUserId('');
     }
+  }
+
+  // Editierbaren HTML-Text von den Einstellungen laden
+  async function loadHomePageText() {
+    setIsLoadingText(true);
+    try {
+      const text = await SettingsService.getHomePageText();
+      setHomePageText(text);
+    } catch (error) {
+      console.error('Fehler beim Laden des Startseiten-Textes:', error);
+      setHomePageText('<p>Willkommen zur Medienausleihe! Hier können Sie Equipment für Ihre Projekte ausleihen.</p>');
+    }
+    setIsLoadingText(false);
+  }
 
   return (
-    <div style={{ maxWidth: 600, margin: '2rem auto', padding: '1rem' }}>
-      <h1>Neuigkeiten</h1>
+    <div className="w-full max-w-2xl mx-auto py-8 fade-in overflow-x-hidden">
+      <div className="mb-8 w-full">
+        {/* <h1 className="text-3xl font-semibold text-gray-900 mb-6">Neuigkeiten</h1> */}
+        
+        {/* Benutzer-Begrüßung */}
         {userId && (
-          <div style={{ marginBottom: '1.5rem', fontWeight: 'bold', color: '#1976d2' }}>
-            Willkommen, {userId} <span style={{ color: '#555', fontWeight: 'normal' }}>({userRole})</span>!
+          <div className="mb-6 p-2 sm:p-4 bg-blue-50 border border-blue-200 rounded-lg w-full overflow-hidden">
+            <div className="text-blue-800 font-semibold break-words text-sm sm:text-base hyphens-auto">
+              Willkommen, {userId}{' '}
+              <span className="text-blue-600 font-normal">({userRole})</span>!
+            </div>
           </div>
         )}
-      {news.length === 0 ? (
-        <p>Keine News vorhanden.</p>
-      ) : (
-        news.map(item => (
-          <div key={item.id} style={{ marginBottom: '2rem', borderBottom: '1px solid #ccc', paddingBottom: '1rem' }}>
-            <h2 style={{ margin: 0 }}>{item.title}</h2>
-            <small style={{ color: '#888' }}>{item.date}</small>
-            <p>{item.content}</p>
-          </div>
-        ))
-      )}
+        
+        {/* Editierbarer HTML-Text aus den Einstellungen */}
+        <div className="mb-8 p-0 bg-gray-50 border border-gray-200 rounded-lg w-full overflow-hidden">
+          {isLoadingText ? (
+            <div className="text-gray-500 p-0 text-sm sm:text-base">Lädt Informationen...</div>
+          ) : (
+            <div 
+              className="prose prose-blue max-w-none w-full overflow-hidden break-words hyphens-auto text-sm sm:text-base leading-relaxed p-0"
+              dangerouslySetInnerHTML={{ __html: homePageText }}
+            />
+          )}
+        </div>
+      </div>
     </div>
   );
 }
