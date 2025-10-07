@@ -5,7 +5,7 @@ services:
       dockerfile: docker/Dockerfile
       args:
         # Build-time Variablen für Frontend-Konfiguration
-        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://localhost:3001}
+        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://95.175.98.147:3001}
         VITE_GOOGLE_CALENDAR_API_KEY: ${VITE_GOOGLE_CALENDAR_API_KEY:-}
         VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
         VITE_APP_NAME: ${VITE_APP_NAME:-Medienausleihe OTH-AW}
@@ -17,11 +17,5 @@ services:
     environment:
       - NODE_ENV=production
     restart: unless-stopped
-    networks:
-      - medienausleihe-network
 
-networks:
-  medienausleihe-network:
-    name: medienausleihe-network
-    driver: bridge
-    external: true
+# Standard Docker-Netzwerk
