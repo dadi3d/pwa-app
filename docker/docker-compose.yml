@@ -4,10 +4,8 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://95.175.98.147:3001}
+        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://localhost:3001}
         VITE_APP_NAME: ${VITE_APP_NAME:-Medienausleihe OTH-AW}
-        VITE_APP_SHORT_NAME: ${VITE_APP_SHORT_NAME:-Medienausleihe}
-        VITE_APP_DESCRIPTION: ${VITE_APP_DESCRIPTION:-Medienausleihe System der OTH Amberg-Weiden}
     container_name: medienausleihe-app
     ports:
       - "${APP_PORT:-8080}:80"

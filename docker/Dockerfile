@@ -16,22 +16,17 @@ COPY . .
 # Build arguments (must be provided at build time)
 ARG VITE_SERVER_URL
 ARG VITE_APP_NAME
-ARG VITE_APP_SHORT_NAME
-ARG VITE_APP_DESCRIPTION
 
 # Set environment variables for build
 ENV VITE_SERVER_URL=$VITE_SERVER_URL
 ENV VITE_APP_NAME=$VITE_APP_NAME
-ENV VITE_APP_SHORT_NAME=$VITE_APP_SHORT_NAME
-ENV VITE_APP_DESCRIPTION=$VITE_APP_DESCRIPTION
 
 # Show build-time environment variables
 RUN echo "🔧 Build Config:" && \
     echo "VITE_SERVER_URL: $VITE_SERVER_URL" && \
     echo "VITE_APP_NAME: $VITE_APP_NAME" && \
-    echo "VITE_APP_DESCRIPTION=$VITE_APP_DESCRIPTION" >> /build-config.txt && \
-    echo "VITE_GOOGLE_CALENDAR_API_KEY=$(if [ -n "$VITE_GOOGLE_CALENDAR_API_KEY" ]; then echo "***SET***"; else echo "not set"; fi)" >> /build-config.txt && \
-    echo "VITE_GOOGLE_MAPS_API_KEY=$(if [ -n "$VITE_GOOGLE_MAPS_API_KEY" ]; then echo "***SET***"; else echo "not set"; fi)" >> /build-config.txt
+    echo "VITE_SERVER_URL=$VITE_SERVER_URL" > /build-config.txt && \
+    echo "VITE_APP_NAME=$VITE_APP_NAME" >> /build-config.txt
 
 # Build the app
 RUN npm run build

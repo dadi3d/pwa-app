@@ -19,12 +19,6 @@ if [ -f /build-config.txt ]; then
             VITE_APP_NAME)
                 echo "- App Name: $value"
                 ;;
-            VITE_APP_SHORT_NAME)
-                echo "- App Short Name: $value"
-                ;;
-            VITE_APP_DESCRIPTION)
-                echo "- App Description: $value"
-                ;;
             VITE_GOOGLE_CALENDAR_API_KEY)
                 echo "- Google Calendar API: $value"
                 ;;
