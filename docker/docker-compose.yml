@@ -3,6 +3,16 @@ services:
     build:
       context: ..
       dockerfile: docker/Dockerfile
+      args:
+        # Build-time Variablen für Frontend (nötig für Vite!)
+        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://95.175.98.147:3001}
+        VITE_MONGODB_URL: ${VITE_MONGODB_URL:-95.175.98.147:27018}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://95.175.98.147:3001/api}
+        VITE_GOOGLE_CALENDAR_API_KEY: ${VITE_GOOGLE_CALENDAR_API_KEY:-}
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+        VITE_APP_NAME: ${VITE_APP_NAME:-Medienausleihe OTH-AW}
+        VITE_APP_SHORT_NAME: ${VITE_APP_SHORT_NAME:-Medienausleihe}
+        VITE_APP_DESCRIPTION: ${VITE_APP_DESCRIPTION:-Medienausleihe System der OTH Amberg-Weiden}
     container_name: medienausleihe-app
     ports:
       - "${APP_PORT:-8080}:80"
@@ -12,14 +22,6 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       - SERVER_HOST=${SERVER_HOST:-95.175.98.147}
       - SERVER_PORT=${SERVER_PORT:-3001}
-      - VITE_SERVER_URL=${VITE_SERVER_URL}
-      - VITE_MONGODB_URL=${VITE_MONGODB_URL}
-      - VITE_API_BASE_URL=${VITE_API_BASE_URL}
-      - VITE_GOOGLE_CALENDAR_API_KEY=${VITE_GOOGLE_CALENDAR_API_KEY}
-      - VITE_GOOGLE_MAPS_API_KEY=${VITE_GOOGLE_MAPS_API_KEY}
-      - VITE_APP_NAME=${VITE_APP_NAME:-Medienausleihe OTH-AW}
-      - VITE_APP_SHORT_NAME=${VITE_APP_SHORT_NAME:-Medienausleihe}
-      - VITE_APP_DESCRIPTION=${VITE_APP_DESCRIPTION:-Medienausleihe System der OTH Amberg-Weiden}
     restart: unless-stopped
 
-# Eigenständiger Service - keine Build-Zeit-Abhängigkeiten
+# Frontend benötigt Build-Zeit-Variablen für korrekte URLs
