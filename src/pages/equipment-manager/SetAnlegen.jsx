@@ -496,9 +496,9 @@ export default function SetAnlegen() {
                 ))}
               </select>
             </li>
-            {/* Zuordnung */}
+            {/* Verfügbarkeit */}
             <li>
-              <label>Zuordnung</label>
+              <label>Verfügbarkeit</label>
               <div className="inline">
                 <select value={setAssignment} onChange={e => setSetAssignment(e.target.value)} required style={{ flex: 1 }}>
                   <option value="">Bitte auswählen</option>

@@ -1,40 +1,54 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { MAIN_VARIABLES } from '../../config.js';
+import { Button } from '../../styles/catalyst/button';
+import { Input } from '../../styles/catalyst/input';
+import { Textarea } from '../../styles/catalyst/textarea';
 
 const API_BRANDS = `${MAIN_VARIABLES.SERVER_URL}/api/brands`;
 const API_CATEGORIES = `${MAIN_VARIABLES.SERVER_URL}/api/product-categories`;
 const API_STATES = `${MAIN_VARIABLES.SERVER_URL}/api/product-states`;
 const API_SINGLE_PRODUCTS = `${MAIN_VARIABLES.SERVER_URL}/api/single-products`;
 const API_SETS = `${MAIN_VARIABLES.SERVER_URL}/api/sets`;
+const API_ROOMS = `${MAIN_VARIABLES.SERVER_URL}/api/rooms`;
+const API_CUSTOMERIDS = `${MAIN_VARIABLES.SERVER_URL}/api/product-customerids`;
+const API_TEST_INTERVALS = `${MAIN_VARIABLES.SERVER_URL}/api/product-test-intervals`;
 
-const ProductEdit = ({ productId: propProductId, onSave }) => {
+const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false }) => {
   const params = useParams();
   const productId = propProductId || params.productId;
   const [productData, setProductData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [editMode, setEditMode] = useState(false);
+  const [editMode, setEditMode] = useState(startInEditMode);
 
   // Referenzdaten
   const [brands, setBrands] = useState([]);
   const [categories, setCategories] = useState([]);
   const [states, setStates] = useState([]);
   const [sets, setSets] = useState([]);
+  const [rooms, setRooms] = useState([]);
+  const [customerIds, setCustomerIds] = useState([]);
+  const [testIntervals, setTestIntervals] = useState([]);
+  
+  // Conditional visibility
+  const [showInventory, setShowInventory] = useState(false);
 
   useEffect(() => {
     // Alle Referenzdaten laden
     async function loadRefs() {
-      const [b, c, s, sets] = await Promise.all([
+      const [b, c, s, sets, intervals] = await Promise.all([
         fetch(API_BRANDS).then(res => res.json()),
         fetch(API_CATEGORIES).then(res => res.json()),
         fetch(API_STATES).then(res => res.json()),
         fetch(API_SETS).then(res => res.json()),
+        fetch(API_TEST_INTERVALS).then(res => res.json()),
       ]);
       setBrands(b);
       setCategories(c);
       setStates(s);
       setSets(sets);
+      setTestIntervals(intervals);
     }
     loadRefs();
   }, []);
@@ -44,8 +58,24 @@ const ProductEdit = ({ productId: propProductId, onSave }) => {
     // Produkt-Daten laden
     fetch(`${API_SINGLE_PRODUCTS}/${productId}`)
       .then(res => res.json())
-      .then(data => {
+      .then(async data => {
         setProductData(data);
+        // Prüfen ob Inventarisierung vorhanden
+        if (data.CustomerID || data.Various_1) {
+          setShowInventory(true);
+          // CustomerIDs laden wenn vorhanden
+          fetch(API_CUSTOMERIDS)
+            .then(res => res.json())
+            .then(customerIds => setCustomerIds(customerIds))
+            .catch(err => console.error('Fehler beim Laden der CustomerIDs:', err));
+        }
+        // Räume für das Set laden
+        if (data.set?._id) {
+          await loadRoomsForSet(data.set._id);
+        } else if (data.set) {
+          // Falls set nur als String-ID vorliegt
+          await loadRoomsForSet(data.set);
+        }
         setLoading(false);
       })
       .catch(err => {
@@ -53,6 +83,66 @@ const ProductEdit = ({ productId: propProductId, onSave }) => {
         setLoading(false);
       });
   }, [productId]);
+
+  async function loadRoomsForSet(setId) {
+    try {
+      console.log('Loading rooms for set:', setId);
+      // Set mit Relations laden
+      const setRes = await fetch(`${API_SETS}/${setId}`);
+      const setData = await setRes.json();
+      console.log('Set data:', setData);
+      
+      let roomIds = [];
+      if (setData?.set_relation?.rooms && Array.isArray(setData.set_relation.rooms)) {
+        roomIds = setData.set_relation.rooms;
+      } else if (setData?.rooms && Array.isArray(setData.rooms)) {
+        roomIds = setData.rooms;
+      }
+      
+      console.log('Room IDs found:', roomIds);
+
+      if (roomIds.length > 0) {
+        const fetchedRooms = await Promise.all(
+          roomIds.map(id =>
+            fetch(`${API_ROOMS}/${id}`)
+              .then(res => res.ok ? res.json() : null)
+              .catch(() => null)
+          )
+        );
+        const validRooms = fetchedRooms
+          .filter(room => room && room._id && room.name)
+          .map(room => ({ _id: room._id, name: room.name }));
+        console.log('Valid rooms loaded:', validRooms);
+        setRooms(validRooms);
+      } else {
+        console.log('No rooms found for set, loading all available rooms');
+        // Fallback: alle verfügbaren Räume laden
+        const allRoomsRes = await fetch(API_ROOMS);
+        const allRooms = await allRoomsRes.json();
+        console.log('All available rooms:', allRooms);
+        setRooms(allRooms);
+      }
+    } catch (err) {
+      console.error('Fehler beim Laden der Räume:', err);
+      // Fallback: alle Räume laden
+      try {
+        const allRoomsRes = await fetch(API_ROOMS);
+        const allRooms = await allRoomsRes.json();
+        setRooms(allRooms);
+      } catch (fallbackErr) {
+        console.error('Fehler beim Laden aller Räume:', fallbackErr);
+        setRooms([]);
+      }
+    }
+  }
+
+  async function handleSetChange(newSetId) {
+    if (newSetId) {
+      await loadRoomsForSet(newSetId);
+    } else {
+      setRooms([]);
+    }
+  }
 
   async function handleDelete(id) {
     if (!window.confirm("Produkt wirklich löschen?")) return;
@@ -69,6 +159,24 @@ const ProductEdit = ({ productId: propProductId, onSave }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Bei Set-Änderung: Räume neu laden
+    if (name === 'set') {
+      handleSetChange(value);
+    }
+    
+    // Bei Inventarisierung-Änderung: CustomerIDs laden
+    if (name === 'hasInventory') {
+      const showInv = value === 'ja';
+      setShowInventory(showInv);
+      if (showInv && customerIds.length === 0) {
+        fetch(API_CUSTOMERIDS)
+          .then(res => res.json())
+          .then(data => setCustomerIds(data))
+          .catch(err => console.error('Fehler beim Laden der CustomerIDs:', err));
+      }
+    }
+    
     setProductData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -129,386 +237,497 @@ const ProductEdit = ({ productId: propProductId, onSave }) => {
     }
   };
 
-  if (loading || !productData) return <div>Lade Daten...</div>;
+  if (loading || !productData) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <p className="text-gray-600">Lade Daten...</p>
+      </div>
+    );
+  }
+
+  const displayType = typeof productData.Type === 'object' ? (productData.Type?.name || '–') : (productData.Type || '–');
+  const displayStatus = typeof productData.Status === 'object' ? (productData.Status?.name || '–') : (productData.Status || '–');
+  const displayDeviceType = typeof productData.DeviceType === 'object' ? (productData.DeviceType?.name || '–') : (productData.DeviceType || '–');
 
   return (
-    <div
-      style={{
-        maxWidth: 700,
-        margin: "2rem auto",
-        background: "#fff",
-        borderRadius: 8,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.07)",
-        border: "1px solid #eee",
-        padding: "2rem",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "left",
-        textAlign: "left",
-      }}
-    >
-      <div
-        style={{
-          fontWeight: "bold",
-          fontSize: "1.3rem",
-          padding: "0.7rem 1rem",
-          background: "#f7f7f7",
-          borderBottom: "1px solid #eee",
-          borderRadius: "8px 8px 0 0",
-          margin: "-2rem -2rem 2rem -2rem",
-        }}
-      >
-        {productData.Designation?.name?.de || productData.Designation?.name || "–"}
-        {productData.SerialNumber && ` (${productData.SerialNumber})`}
+    <div className="w-full">
+      <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 -mx-6 -mt-6 mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {productData.Designation?.name?.de || productData.Designation?.name || "Produkt"}
+          {productData.SerialNumber && <span className="text-gray-600 font-normal"> (S/N: {productData.SerialNumber})</span>}
+        </h2>
       </div>
 
       {!editMode ? (
-        <div style={{ padding: "1rem" }}>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Hersteller:</strong> {productData.Manufacturer?.name || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Bezeichnung:</strong> {productData.Designation?.name?.de || productData.Designation?.name || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Typ:</strong> {productData.Type || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Seriennummer:</strong> {productData.SerialNumber || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Kostenstelle:</strong> {productData.CostCenter || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Abteilung:</strong> {productData.Department || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Kunden-ID:</strong> {productData.CustomerID || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>IVS-Nummer:</strong> {productData.Various_1 || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Status:</strong> {productData.Status || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Gerätetyp:</strong> {productData.DeviceType || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Aktiv:</strong> {productData.IsActive ? "Ja" : "Nein"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Prüfintervall (Monate):</strong> {productData.TestingInterval || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>ID:</strong> {productData.ID || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Letztes Prüfdatum:</strong> {
-              productData.LastTestingDate 
-                ? new Date(productData.LastTestingDate).toLocaleDateString('de-DE')
-                : "–"
-            }
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Bemerkung:</strong> {productData.Remark || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Zustand:</strong> {productData.state?.name?.de || productData.state?.name || "–"}
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <strong>Zugehöriges Set:</strong> {
-              productData.set?.set_name?.name?.de || 
-              productData.set?.set_name?.name || 
-              "Kein Set zugewiesen"
-            }
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Hersteller</p>
+              <p className="text-gray-900">{productData.Manufacturer?.name || "–"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Bezeichnung</p>
+              <p className="text-gray-900">{productData.Designation?.name?.de || productData.Designation?.name || "–"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Typ</p>
+              <p className="text-gray-900">{displayType}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Seriennummer</p>
+              <p className="text-gray-900">{productData.SerialNumber || "–"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Kostenstelle</p>
+              <p className="text-gray-900">{productData.CostCenter || "–"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Raumnummer</p>
+              <p className="text-gray-900">{typeof productData.Department === 'object' ? (productData.Department?.name || '–') : (productData.Department || '–')}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Bereichsnummer</p>
+              <p className="text-gray-900">{typeof productData.CustomerID === 'object' ? (productData.CustomerID?.name || '–') : (productData.CustomerID || '–')}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">IVS-Nummer</p>
+              <p className="text-gray-900">{productData.Various_1 || "–"}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Status</p>
+              <p className="text-gray-900">{displayStatus}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Gerätetyp</p>
+              <p className="text-gray-900">{displayDeviceType}</p>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Elektrische Prüfung</p>
+              <p className={`font-medium ${productData.IsActive ? 'text-green-600' : 'text-red-600'}`}>
+                {productData.IsActive ? "Ja" : "Nein"}
+              </p>
+            </div>
+            {productData.IsActive && (
+              <>
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">Prüfintervall</p>
+                  <p className="text-gray-900">{productData.TestingInterval || "–"} Monate</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">ID</p>
+                  <p className="text-gray-900">{productData.ID || "–"}</p>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">Letztes Prüfdatum</p>
+                  <p className="text-gray-900">
+                    {productData.LastTestingDate 
+                      ? new Date(productData.LastTestingDate).toLocaleDateString('de-DE')
+                      : "–"}
+                  </p>
+                </div>
+              </>
+            )}
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Zustand</p>
+              <p className="text-gray-900">{productData.state?.name?.de || productData.state?.name || "–"}</p>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-sm font-semibold text-gray-700">Zugehöriges Set</p>
+              <p className="text-gray-900">
+                {productData.set?.set_name?.name?.de || 
+                 productData.set?.set_name?.name || 
+                 "Kein Set zugewiesen"}
+              </p>
+            </div>
           </div>
 
-          <div style={{ marginTop: 32 }}>
-            <button
+          {productData.Remark && (
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <p className="text-sm font-semibold text-gray-700 mb-2">Bemerkung</p>
+              <p className="text-gray-900 bg-gray-50 p-3 rounded border border-gray-200">
+                {productData.Remark}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-8 pt-6 border-t border-gray-200 flex gap-3">
+            <Button
               type="button"
-              style={{
-                background: "#1976d2",
-                color: "#fff",
-                border: "none",
-                borderRadius: 4,
-                padding: "8px 24px",
-                fontSize: "1rem",
-                cursor: "pointer",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-              }}
+              className="hover:border-orange-500 hover:text-orange-600 transition-colors duration-200"
+              outline
               onClick={() => setEditMode(true)}
             >
               Bearbeiten
-            </button>
-
-            <button
-              style={{
-                background: "#e74c3c",
-                color: "#fff",
-                border: "none",
-                borderRadius: 4,
-                padding: "8px 24px",
-                fontSize: "1rem",
-                cursor: "pointer",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-                marginLeft: 12,
-              }}
-              onClick={e => {
+            </Button>
+            <Button
+              type="button"
+              color="red"
+              onClick={(e) => {
                 e.stopPropagation();
                 handleDelete(productId);
               }}
-              title="Produkt löschen"
             >
               Löschen
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSave}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            <label>
-              Hersteller:
+        <form onSubmit={handleSave} className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Set */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Set *
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Welchem Set soll das Produkt zugeordnet werden?</p>
+              <select 
+                name="set" 
+                value={productData.set?._id || productData.set || ""} 
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Bitte wählen --</option>
+                {sets.map(s => (
+                  <option key={s._id} value={s._id}>
+                    {`${s.manufacturer?.name || ''} - ${s.set_name?.name?.de || s.set_name?.name || ''} - Set ${s.set_number || ''}`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Hersteller */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Hersteller *
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Wählen Sie den Hersteller des Produkts.</p>
               <select 
                 name="Manufacturer" 
                 value={productData.Manufacturer?._id || productData.Manufacturer || ""} 
                 onChange={handleChange}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Bitte wählen</option>
+                <option value="">-- Bitte wählen --</option>
                 {brands.map(b => (
                   <option key={b._id} value={b._id}>{b.name}</option>
                 ))}
               </select>
-            </label>
+            </div>
 
-            <label>
-              Bezeichnung:
+            {/* Typenbezeichnung */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Typenbezeichnung *
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Wie lautet die Bezeichnung des Produkts?</p>
+              <Input 
+                name="Type" 
+                type="text" 
+                value={typeof productData.Type === 'object' ? (productData.Type?.name || '') : (productData.Type || '')} 
+                onChange={handleChange}
+                required
+              />
+            </div>
+
+            {/* Kategorie */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Kategorie *
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Wählen Sie die Kategorie des Produkts.</p>
               <select 
                 name="Designation" 
                 value={productData.Designation?._id || productData.Designation || ""} 
                 onChange={handleChange}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Bitte wählen</option>
+                <option value="">-- Bitte wählen --</option>
                 {categories.map(c => (
                   <option key={c._id} value={c._id}>{c.name?.de || c.name}</option>
                 ))}
               </select>
-            </label>
+            </div>
 
-            <label>
-              Typ:
-              <input 
-                name="Type" 
-                type="text" 
-                value={productData.Type || ""} 
-                onChange={handleChange}
-                required
-              />
-            </label>
-
-            <label>
-              Seriennummer:
-              <input 
+            {/* Seriennummer */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Seriennummer
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Wie lautet die Seriennummer des Produkts, falls vorhanden?</p>
+              <Input 
                 name="SerialNumber" 
                 type="text" 
                 value={productData.SerialNumber || ""} 
                 onChange={handleChange}
               />
-            </label>
+            </div>
 
-            <label>
-              Kostenstelle:
-              <input 
+            {/* Bestellnummer */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bestellnummer *
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Wie lautet die vom Haushalt vergebene Bestellnummer?</p>
+              <Input 
                 name="CostCenter" 
                 type="text" 
                 value={productData.CostCenter || ""} 
                 onChange={handleChange}
                 required
               />
-            </label>
+            </div>
 
-            <label>
-              Abteilung:
-              <input 
+            {/* Raumnummer */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Raumnummer *
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Wie lautet die Raumnummer, in dem das Produkt verwendet / gelagert wird?</p>
+              <select 
                 name="Department" 
-                type="text" 
-                value={productData.Department || ""} 
+                value={typeof productData.Department === 'object' ? (productData.Department?._id || '') : (productData.Department || '')} 
                 onChange={handleChange}
                 required
-              />
-            </label>
-
-            <label>
-              Kunden-ID:
-              <input 
-                name="CustomerID" 
-                type="number" 
-                value={productData.CustomerID || ""} 
-                onChange={handleChange}
-              />
-            </label>
-
-            <label>
-              IVS-Nummer:
-              <input 
-                name="Various_1" 
-                type="number" 
-                value={productData.Various_1 || ""} 
-                onChange={handleChange}
-              />
-            </label>
-
-            <label>
-              Status:
-              <select 
-                name="Status" 
-                value={productData.Status || "aktiv"} 
-                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="aktiv">Aktiv</option>
-                <option value="inaktiv">Inaktiv</option>
-                <option value="defekt">Defekt</option>
-                <option value="wartung">In Wartung</option>
+                <option value="">-- Bitte wählen --</option>
+                {rooms.map(room => (
+                  <option key={room._id} value={room._id}>{room.name}</option>
+                ))}
               </select>
-            </label>
+            </div>
 
-            <label>
-              Gerätetyp:
+            {/* Inventarisierung */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Inventarisierung? *
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Wird das Produkt inventarisiert (Produktwert &gt; 800€ Netto)?</p>
+              <select 
+                name="hasInventory" 
+                value={showInventory ? 'ja' : 'nein'} 
+                onChange={handleChange}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Bitte wählen --</option>
+                <option value="ja">Ja</option>
+                <option value="nein">Nein</option>
+              </select>
+            </div>
+
+            {/* Bereichsnummer & Inventarnummer - nur wenn Inventarisierung = Ja */}
+            {showInventory && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bereichsnummer *
+                  </label>
+                  <select 
+                    name="CustomerID" 
+                    value={typeof productData.CustomerID === 'object' ? (productData.CustomerID?._id || '') : (productData.CustomerID || '')} 
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Bitte wählen --</option>
+                    {customerIds.map(cid => (
+                      <option key={cid._id} value={cid._id}>
+                        {cid.area}{cid.description ? ` - ${cid.description}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Inventarnummer *
+                  </label>
+                  <p className="text-xs text-gray-500 mb-2">Wie lautet die vom Haushalt vergebene Inventarnummer?</p>
+                  <Input 
+                    name="Various_1" 
+                    type="number" 
+                    value={productData.Various_1 || ""} 
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Gerätetyp - disabled */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Gerätetyp
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Vorgegebener Standardwert</p>
               <select 
                 name="DeviceType" 
-                value={productData.DeviceType || "Normal"} 
-                onChange={handleChange}
+                value="Normal"
+                disabled
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
               >
                 <option value="Normal">Normal</option>
-                <option value="Prüfgerät">Prüfgerät</option>
-                <option value="Messgerät">Messgerät</option>
               </select>
-            </label>
+            </div>
 
-            <label>
-              Aktiv:
+            {/* Elektrische Prüfung */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Elektrische Prüfung? *
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Für alle ortsveränderlichen Elektrogeräte (z.B. mit Netzanschluss)</p>
               <select 
                 name="IsActive" 
                 value={productData.IsActive ? "true" : "false"} 
                 onChange={(e) => handleChange({target: {name: 'IsActive', value: e.target.value === 'true'}})}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
+                <option value="">-- Bitte wählen --</option>
                 <option value="false">Nein</option>
                 <option value="true">Ja</option>
               </select>
-            </label>
+            </div>
 
-            <label>
-              Prüfintervall (Monate):
-              <input 
-                name="TestingInterval" 
-                type="number" 
-                value={productData.TestingInterval || 24} 
-                onChange={handleChange}
-              />
-            </label>
+            {/* Prüfintervall, ID, Letztes Prüfdatum - nur wenn IsActive = true */}
+            {productData.IsActive && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prüfintervall (Monate) *
+                  </label>
+                  <select 
+                    name="TestingInterval" 
+                    value={productData.TestingInterval || ""} 
+                    onChange={handleChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Bitte wählen --</option>
+                    {testIntervals.map(interval => (
+                      <option key={interval._id} value={interval.duration}>
+                        {interval.duration}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <label>
-              ID:
-              <input 
-                name="ID" 
-                type="number" 
-                value={productData.ID || ""} 
-                onChange={handleChange}
-              />
-            </label>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    ID (Elektrische Prüfung) *
+                  </label>
+                  <Input 
+                    name="ID" 
+                    type="text" 
+                    value={productData.ID || ""} 
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-            <label>
-              Letztes Prüfdatum:
-              <input 
-                name="LastTestingDate" 
-                type="date" 
-                value={
-                  productData.LastTestingDate 
-                    ? new Date(productData.LastTestingDate).toISOString().split('T')[0]
-                    : ""
-                } 
-                onChange={handleChange}
-              />
-            </label>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Letzte elektrische Prüfung
+                  </label>
+                  <Input 
+                    name="LastTestingDate" 
+                    type="date" 
+                    value={
+                      productData.LastTestingDate 
+                        ? new Date(productData.LastTestingDate).toISOString().split('T')[0]
+                        : ""
+                    } 
+                    onChange={handleChange}
+                  />
+                </div>
+              </>
+            )}
 
-            <label>
-              Bemerkung:
-              <textarea 
+            {/* Anmerkung */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Anmerkung
+              </label>
+              <p className="text-xs text-gray-500 mb-2">Für den internen Gebrauch</p>
+              <Textarea 
                 name="Remark" 
                 value={productData.Remark || ""} 
                 onChange={handleChange}
-                rows="3"
-                style={{ resize: "vertical" }}
+                rows={3}
               />
-            </label>
+            </div>
 
-            <label>
-              Zustand:
+            {/* Produktstatus */}
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Produktstatus *
+              </label>
               <select 
                 name="state" 
                 value={productData.state?._id || productData.state || ""} 
                 onChange={handleChange}
                 required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
-                <option value="">Bitte wählen</option>
+                <option value="">-- Bitte wählen --</option>
                 {states.map(s => (
                   <option key={s._id} value={s._id}>{s.name?.de || s.name}</option>
                 ))}
               </select>
-            </label>
-
-            <label>
-              Zugehöriges Set:
-              <select 
-                name="set" 
-                value={productData.set?._id || productData.set || ""} 
-                onChange={handleChange}
-              >
-                <option value="">Kein Set</option>
-                {sets.map(s => (
-                  <option key={s._id} value={s._id}>
-                    {s.set_name?.name?.de || s.set_name?.name || `Set ${s._id}`}
-                  </option>
-                ))}
-              </select>
-            </label>
+            </div>
           </div>
 
-          <div style={{ marginTop: 32 }}>
-            <button
-              type="submit"
-              disabled={saving}
-              style={{
-                background: "#1976d2",
-                color: "#fff",
-                border: "none",
-                borderRadius: 4,
-                padding: "8px 24px",
-                fontSize: "1rem",
-                cursor: "pointer",
-                boxShadow: "0 1px 4px rgba(0,0,0,0.07)",
-                marginRight: 8,
-              }}
-            >
-              {saving ? "Speichern..." : "Speichern"}
-            </button>
-            <button
+          <div className="pt-6 border-t border-gray-200 flex gap-3 justify-between">
+            <div className="flex gap-3">
+              <Button
+                type="submit"
+                disabled={saving}
+                className="hover:border-orange-500 hover:text-orange-600 transition-colors duration-200"
+                outline
+              >
+                {saving ? "Speichern..." : "Speichern"}
+              </Button>
+              <Button
+                type="button"
+                onClick={() => setEditMode(false)}
+                color="zinc"
+              >
+                Abbrechen
+              </Button>
+            </div>
+            <Button
               type="button"
-              style={{
-                background: "#eee",
-                color: "#333",
-                border: "none",
-                borderRadius: 4,
-                padding: "8px 24px",
-                fontSize: "1rem",
-                cursor: "pointer",
+              color="red"
+              onClick={async () => {
+                const typeName = typeof productData.Type === 'object' 
+                  ? (productData.Type?.name || 'Produkt') 
+                  : (productData.Type || 'Produkt');
+                const serial = productData.SerialNumber || '-';
+                
+                if (window.confirm(`Möchten Sie das Produkt "${typeName}" mit der Seriennummer "${serial}" wirklich löschen?`)) {
+                  try {
+                    const res = await fetch(`${API_SINGLE_PRODUCTS.replace('?set=', '')}/${productId}`, { 
+                      method: 'DELETE' 
+                    });
+                    if (res.ok) {
+                      alert('Produkt erfolgreich gelöscht.');
+                      if (onSave) onSave(); // Trigger reload in parent
+                    } else {
+                      alert('Fehler beim Löschen des Produkts.');
+                    }
+                  } catch (err) {
+                    console.error('Fehler beim Löschen:', err);
+                    alert('Fehler beim Löschen des Produkts.');
+                  }
+                }
               }}
-              onClick={() => setEditMode(false)}
             >
-              Abbrechen
-            </button>
+              Löschen
+            </Button>
           </div>
         </form>
       )}
