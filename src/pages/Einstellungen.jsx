@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MAIN_VARIABLES } from "../config";
 import { SettingsService } from "./services/Settings.js";
 import { Button } from "../styles/catalyst/button";
+import packageJson from '../../package.json';
 
 const weekdays = [
   "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
@@ -511,6 +512,10 @@ export default function Einstellungen() {
                             <div>
                                 <h3 className="text-sm font-medium text-gray-700 mb-3">App Information</h3>
                                 <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Version:</span>
+                                        <span className="font-mono">{packageJson.version}</span>
+                                    </div>
                                     <div className="flex justify-between">
                                         <span className="text-gray-600">Status:</span>
                                         <span className="text-green-600 font-medium">Online</span>

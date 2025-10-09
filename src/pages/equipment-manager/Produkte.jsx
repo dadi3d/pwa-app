@@ -174,11 +174,12 @@ export default function SetProdukte() {
                     const designation = p.Designation?.name?.de || p.Designation?.name || '–';
                     const category = set?.category?.name?.de || set?.category?.name || '–';
                     
-                    // S/N nur anzeigen, wenn vorhanden
-                    const serialNumber = p.SerialNumber && p.SerialNumber.trim() !== '' ? p.SerialNumber : null;
-                    const headerText = serialNumber 
-                        ? `${brand} ${setName} – S/N: ${serialNumber}`
-                        : `${brand} ${setName}`;
+                    // Hersteller und Typ des Produkts
+                    const productManufacturer = p.Manufacturer?.name || p.manufacturer?.name || '–';
+                    const productType = typeof p.Type === 'object' ? (p.Type?.name || '–') : (p.Type || '–');
+                    
+                    // Header mit Hersteller und Typ des Produkts
+                    const headerText = `${productManufacturer} ${productType}`;
 
                     return (
                         <div key={p._id} className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">

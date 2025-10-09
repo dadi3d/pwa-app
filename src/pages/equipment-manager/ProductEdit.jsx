@@ -249,12 +249,16 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
   const displayStatus = typeof productData.Status === 'object' ? (productData.Status?.name || '–') : (productData.Status || '–');
   const displayDeviceType = typeof productData.DeviceType === 'object' ? (productData.DeviceType?.name || '–') : (productData.DeviceType || '–');
 
+  // Header Text: Hersteller Typ
+  const manufacturer = productData.Manufacturer?.name || productData.manufacturer?.name || '–';
+  const type = typeof productData.Type === 'object' ? (productData.Type?.name || '–') : (productData.Type || '–');
+  const headerText = `${manufacturer} ${type}`;
+
   return (
     <div className="w-full">
       <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 -mx-6 -mt-6 mb-6">
         <h2 className="text-2xl font-bold text-gray-900">
-          {productData.Designation?.name?.de || productData.Designation?.name || "Produkt"}
-          {productData.SerialNumber && <span className="text-gray-600 font-normal"> (S/N: {productData.SerialNumber})</span>}
+          {headerText}
         </h2>
       </div>
 
