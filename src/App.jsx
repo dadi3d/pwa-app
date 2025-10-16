@@ -118,6 +118,7 @@ function App() {
       <div className="p-2 pb-[4.5rem]">
         <Routes>
           <Route path="/" element={<Login />} />
+          <Route path="/admin" element={<Login />} />
           <Route path="/home" element={<Home />} />
           <Route path="/produkte" element={<Produkte />} />
           <Route path="/auftraege" element={<Auftraege />} />
