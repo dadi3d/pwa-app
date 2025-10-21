@@ -4,9 +4,19 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        VITE_SERVER_URL: ${VITE_SERVER_URL:-http://localhost:3001}
-        VITE_APP_NAME: ${VITE_APP_NAME:-Medienausleihe OTH-AW}
+        VITE_SERVER_URL: ${VITE_SERVER_URL}
+        VITE_APP_NAME: ${VITE_APP_NAME}
+        NODE_ENV: ${NODE_ENV}
     container_name: medienausleihe-app
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - APP_PORT=${APP_PORT}
     ports:
-      - "${APP_PORT:-8080}:80"
+      - "${APP_PORT}:80"
     restart: unless-stopped
+    networks:
+      - ausleihe
+
+networks:
+  ausleihe:
+    external: true
