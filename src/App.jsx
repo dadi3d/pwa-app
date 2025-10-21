@@ -1,12 +1,11 @@
 
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Home from './pages/Home.jsx';
 import Produkte from './pages/Produkte.jsx';
 import Auftraege from './pages/Auftraege.jsx';
 import AuftraegeAdmin from './pages/order-manager/AuftraegeAdmin.jsx';
 import Login from './pages/Login.jsx';
-import LoginUser from './pages/LoginUser.jsx';
 import EquipmentManagerMenu from './pages/Equipment.jsx';
 import Einstellungen from './pages/Einstellungen.jsx';
 import Kalender from './pages/Kalender.jsx';
@@ -29,7 +28,6 @@ import AuftragEditAdmin from './pages/order-manager/AuftragEditAdmin.jsx';
 import FileManager from './pages/FileManager.jsx';
 import SetEdit from './pages/equipment-manager/SetEdit.jsx';
 import SetCopy from './pages/equipment-manager/SetKopieren.jsx';
-
 const iconStyle = { fontSize: '1.5rem', marginBottom: '0.2rem' };
 
 
@@ -119,8 +117,7 @@ function App() {
       />
       <div className="p-2 pb-[4.5rem]">
         <Routes>
-          <Route path="/" element={<LoginUser />} />
-          <Route path="/login" element={<LoginUser />} />
+          <Route path="/" element={<Login />} />
           <Route path="/admin" element={<Login />} />
           <Route path="/home" element={<Home />} />
           <Route path="/produkte" element={<Produkte />} />
