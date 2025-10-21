@@ -10,3 +10,9 @@ services:
     ports:
       - "${APP_PORT:-8080}:80"
     restart: unless-stopped
+    networks:
+      - ausleihe
+
+networks:
+  ausleihe:
+    external: true
