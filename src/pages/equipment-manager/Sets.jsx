@@ -16,6 +16,8 @@ export default function Sets() {
     const [expandedSetId, setExpandedSetId] = useState(null);
     const [productsBySet, setProductsBySet] = useState({});
     const [selectedSetId, setSelectedSetId] = useState(null); // Für Lightbox
+    const [setValues, setSetValues] = useState({}); // Für Set-Werte
+    const [expandedGroup, setExpandedGroup] = useState(null); // Für Gruppen-Flyout
 
     useEffect(() => {
         async function loadFilters() {
@@ -38,11 +40,36 @@ export default function Sets() {
         };
     }, [selectedSetId]);
 
+    // Funktion zum Laden aller Set-Werte
+    const loadAllSetValues = async (sets) => {
+        const valuePromises = sets.map(async (set) => {
+            try {
+                const res = await fetch(API_SINGLE_PRODUCTS + set._id);
+                if (!res.ok) throw new Error("Fehler beim Laden der Produkte");
+                const products = await res.json();
+                const setValue = calculateSetValue(products);
+                return { setId: set._id, value: setValue };
+            } catch {
+                return { setId: set._id, value: 0 };
+            }
+        });
+
+        const results = await Promise.all(valuePromises);
+        const newSetValues = {};
+        results.forEach(({ setId, value }) => {
+            newSetValues[setId] = value;
+        });
+        setSetValues(newSetValues);
+    };
+
     useEffect(() => {
         async function loadSets() {
             const res = await fetch(API_SETS);
             const sets = await res.json();
             setAllSets(sets);
+
+            // Alle Set-Werte laden
+            await loadAllSetValues(sets);
 
             const urlParams = new URLSearchParams(window.location.search);
             const brand = urlParams.get("manufacturer");
@@ -72,6 +99,19 @@ export default function Sets() {
         loadSets();
     }, []);
 
+    // Funktion zum Berechnen des Set-Werts
+    const calculateSetValue = (products) => {
+        if (!products || products.length === 0) return 0;
+        
+        return products.reduce((total, product) => {
+            // Nur ProductValue addieren, wenn es nicht null ist
+            if (product.ProductValue !== null && product.ProductValue !== undefined) {
+                return total + (parseFloat(product.ProductValue) || 0);
+            }
+            return total;
+        }, 0);
+    };
+
     const handleExpand = async (setId) => {
         setExpandedSetId(expandedSetId === setId ? null : setId);
         if (!productsBySet[setId]) {
@@ -80,8 +120,13 @@ export default function Sets() {
                 if (!res.ok) throw new Error("Fehler beim Laden der Produkte");
                 const products = await res.json();
                 setProductsBySet((prev) => ({ ...prev, [setId]: products }));
+                
+                // Set-Wert berechnen und speichern
+                const setValue = calculateSetValue(products);
+                setSetValues((prev) => ({ ...prev, [setId]: setValue }));
             } catch {
                 setProductsBySet((prev) => ({ ...prev, [setId]: [] }));
+                setSetValues((prev) => ({ ...prev, [setId]: 0 }));
             }
         }
     };
@@ -92,25 +137,51 @@ export default function Sets() {
         return matchesBrand && matchesCategory;
     });
 
-    const sortedSets = [...filteredSets].sort((a, b) => {
-        const brandA = a.manufacturer?.name?.toLowerCase() || "";
-        const brandB = b.manufacturer?.name?.toLowerCase() || "";
-        if (brandA !== brandB) {
-            return brandA.localeCompare(brandB);
+    // Sets nach Hersteller und Set-Name gruppieren
+    const groupedSets = filteredSets.reduce((groups, set) => {
+        const manufacturerName = set.manufacturer?.name || "–";
+        const setName = set.set_name?.name?.de || "–";
+        const groupKey = `${manufacturerName}-${setName}`;
+        
+        if (!groups[groupKey]) {
+            groups[groupKey] = {
+                manufacturerName,
+                setName,
+                sets: [],
+                totalValue: 0
+            };
         }
-        const nameA = a.set_name?.name?.de?.toLowerCase() || "";
-        const nameB = b.set_name?.name?.de?.toLowerCase() || "";
+        
+        groups[groupKey].sets.push(set);
+        return groups;
+    }, {});
+
+    // Gruppen-Werte berechnen
+    Object.keys(groupedSets).forEach(groupKey => {
+        const group = groupedSets[groupKey];
+        group.totalValue = group.sets.reduce((total, set) => {
+            return total + (setValues[set._id] || 0);
+        }, 0);
+    });
+
+    // Gruppen sortieren
+    const sortedGroups = Object.entries(groupedSets).sort(([keyA, groupA], [keyB, groupB]) => {
+        const nameA = `${groupA.manufacturerName} ${groupA.setName}`.toLowerCase();
+        const nameB = `${groupB.manufacturerName} ${groupB.setName}`.toLowerCase();
         return nameA.localeCompare(nameB);
     });
 
     return (
-        <div style={{ maxWidth: 900, margin: "2rem auto", padding: "1rem" }}>
-            <h1>Sets Übersicht</h1>
-            <div style={{ marginBottom: 16, display: "flex", gap: 16 }}>
+        <div className="max-w-6xl mx-auto p-4">
+            <h1 className="text-3xl font-bold text-gray-900 mb-6">Sets Übersicht</h1>
+            
+            {/* Filter Section */}
+            <div className="mb-6 flex flex-wrap gap-4">
                 <select
                     id="brandFilter"
                     value={brandFilter}
                     onChange={(e) => setBrandFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
                 >
                     <option value="">Alle Hersteller</option>
                     {brands
@@ -126,6 +197,7 @@ export default function Sets() {
                     id="categoryFilter"
                     value={categoryFilter}
                     onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white shadow-sm"
                 >
                     <option value="">Alle Kategorien</option>
                     {categories
@@ -137,104 +209,131 @@ export default function Sets() {
                             </option>
                         ))}
                 </select>
-                <button onClick={() => { setBrandFilter(""); setCategoryFilter(""); }}>
+                <button 
+                    onClick={() => { setBrandFilter(""); setCategoryFilter(""); }}
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300 rounded-lg transition-colors duration-200"
+                >
                     Filter zurücksetzen
                 </button>
             </div>
-            <div id="setList">
-                {sortedSets.length === 0 && <div>Keine Sets gefunden.</div>}
-                {sortedSets.map((p) => {
-                    const brand = p.manufacturer?.name || "–";
-                    const category = p.category?.name?.de || "–";
-                    const setName = p.set_name?.name?.de || "–";
-                    const setNr = p.set_number ?? "–";
-                    const thumbnailUrl = `${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${p._id}`;
+            {/* Groups List */}
+            <div className="space-y-4">
+                {sortedGroups.length === 0 && (
+                    <div className="text-center py-8 text-gray-500">Keine Sets gefunden.</div>
+                )}
+                {sortedGroups.map(([groupKey, group]) => {
+                    // Thumbnail des ersten Sets in der Gruppe verwenden
+                    const firstSet = group.sets[0];
+                    const thumbnailUrl = `${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${firstSet._id}`;
+                    
                     return (
+                    <div key={groupKey} className="bg-white rounded-lg shadow-sm border border-gray-200">
+                        {/* Gruppen-Header */}
                         <div
-                            className="set"
-                            key={p._id}
-                            id={`set-${p._id}`}
-                            style={{
-                                border: "1px solid #ddd",
-                                borderRadius: 8,
-                                marginBottom: 16,
-                                background: "#fff",
-                                boxShadow: "0 2px 8px rgba(0,0,0,0.03)",
-                                display: "flex",
-                                alignItems: "flex-start",
-                                cursor: "pointer",
-                            }}
-                            onClick={() => setSelectedSetId(p._id)} // Lightbox statt window.open
+                            className="border border-gray-300 bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors duration-200 flex items-center gap-4"
+                            onClick={() => setExpandedGroup(expandedGroup === groupKey ? null : groupKey)}
                         >
                             <img
                                 src={thumbnailUrl}
-                                alt="Set-Thumbnail"
-                                style={{
-                                    width: 150,
-                                    height: 150,
-                                    objectFit: "cover",
-                                    borderRadius: 8,
-                                    margin: 16,
-                                    background: "#eee",
-                                    flexShrink: 0,
-                                }}
+                                alt="Gruppen-Thumbnail"
+                                className="w-20 h-20 object-cover rounded-lg bg-gray-200 flex-shrink-0"
                                 loading="lazy"
                             />
-                            <div style={{ flex: 1 }}>
-                                <div
-                                    className="header"
-                                    style={{
-                                        fontWeight: "bold",
-                                        fontSize: "1.1rem",
-                                        padding: "0.7rem 1rem",
-                                        background: "#f7f7f7",
-                                        borderBottom: "1px solid #eee",
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                    }}
-                                >
-                                    <span>
-                                        {brand} {setName}
-                                    </span>
-                                </div>
-                                <div
-                                    className="details"
-                                    style={{
-                                        padding: "1rem",
-                                    }}
-                                >
-                                    <div style={{
-                                        display: "grid",
-                                        gridTemplateColumns: "1fr 1fr",
-                                        gap: "1rem",
-                                    }}>
-                                        <div style={{ textAlign: "left" }}>
-                                            <p>
-                                                <strong>Zugehörigkeit:</strong> {p.set_relation?.name || "-"}
-                                            </p>
-                                            <p>
-                                                <strong>Kategorie:</strong> {category}
-                                            </p>
-                                            <p>
-                                                <strong>Set-Nr:</strong> {setNr}
-                                            </p>
-                                        </div>
-                                        <div style={{ textAlign: "left" }}>
-                                            <p>
-                                                <strong>Status:</strong> {p.state?.name?.de ?? "-"}
-                                            </p>
-                                            <p>
-                                                <strong>Öffentliche Anmerkung:</strong> {p.note_public || "-"}
-                                            </p>
-                                            <p>
-                                                <strong>Interne Anmerkung:</strong> {p.note_private || "-"}
-                                            </p>
-                                        </div>
-                                    </div>
+                            <div className="flex-1">
+                                <div className="text-lg font-bold text-gray-900">
+                                    {group.manufacturerName} - {group.setName}
                                 </div>
                             </div>
+                            <div className="flex items-center gap-4">
+                                <span className="text-sm text-gray-600 font-medium">
+                                    {group.sets.length} Set{group.sets.length !== 1 ? 's' : ''}
+                                </span>
+                                <span className="text-lg text-gray-700">
+                                    {expandedGroup === groupKey ? '▼' : '▶'}
+                                </span>
+                            </div>
                         </div>
+
+                        {/* Erweiterte Sets-Ansicht */}
+                        {expandedGroup === groupKey && (
+                            <div className="mt-2 ml-4 space-y-3">
+                                {group.sets
+                                    .sort((a, b) => (a.set_number || 0) - (b.set_number || 0))
+                                    .map((p) => {
+                                    const brand = p.manufacturer?.name || "–";
+                                    const category = p.category?.name?.de || "–";
+                                    const setName = p.set_name?.name?.de || "–";
+                                    const setNr = p.set_number ?? "–";
+                                    const thumbnailUrl = `${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${p._id}`;
+                                    return (
+                                        <div
+                                            className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 flex cursor-pointer"
+                                            key={p._id}
+                                            id={`set-${p._id}`}
+                                            onClick={() => setSelectedSetId(p._id)}
+                                        >
+                                            <img
+                                                src={thumbnailUrl}
+                                                alt="Set-Thumbnail"
+                                                className="w-32 h-32 object-cover rounded-lg m-3 bg-gray-200 flex-shrink-0"
+                                                loading="lazy"
+                                            />
+                                            <div className="flex-1 flex flex-col">
+                                                <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 rounded-t-lg">
+                                                    <h3 className="font-bold text-gray-900">
+                                                        {brand} {setName} - Set {setNr}
+                                                    </h3>
+                                                </div>
+                                                <div className="p-4 flex-1">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div className="space-y-2">
+                                                            <p className="text-sm">
+                                                                <span className="font-semibold text-gray-700">Zugehörigkeit:</span>{" "}
+                                                                <span className="text-gray-600">{p.set_relation?.name || "-"}</span>
+                                                            </p>
+                                                            <p className="text-sm">
+                                                                <span className="font-semibold text-gray-700">Kategorie:</span>{" "}
+                                                                <span className="text-gray-600">{category}</span>
+                                                            </p>
+                                                            <p className="text-sm">
+                                                                <span className="font-semibold text-gray-700">Set-Nr:</span>{" "}
+                                                                <span className="text-gray-600">{setNr}</span>
+                                                            </p>
+                                                            <p className="text-sm">
+                                                                <span className="font-semibold text-gray-700">Set-Wert:</span>{" "}
+                                                                <span className="text-green-600 font-medium">
+                                                                    {setValues[p._id] !== undefined 
+                                                                        ? (setValues[p._id] > 0 
+                                                                            ? `${setValues[p._id].toFixed(2).replace('.', ',')} €` 
+                                                                            : "0,00 €")
+                                                                        : "Wird geladen..."
+                                                                    }
+                                                                </span>
+                                                            </p>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <p className="text-sm">
+                                                                <span className="font-semibold text-gray-700">Status:</span>{" "}
+                                                                <span className="text-gray-600">{p.state?.name?.de ?? "-"}</span>
+                                                            </p>
+                                                            <p className="text-sm">
+                                                                <span className="font-semibold text-gray-700">Öffentliche Anmerkung:</span>{" "}
+                                                                <span className="text-gray-600">{p.note_public || "-"}</span>
+                                                            </p>
+                                                            <p className="text-sm">
+                                                                <span className="font-semibold text-gray-700">Interne Anmerkung:</span>{" "}
+                                                                <span className="text-gray-600">{p.note_private || "-"}</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                     );
                 })}
             </div>
@@ -242,49 +341,15 @@ export default function Sets() {
             {/* Lightbox/Modal für SetEdit */}
             {selectedSetId && (
                 <div
-                    style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        width: "100vw",
-                        height: "100vh",
-                        background: "rgba(0,0,0,0.45)",
-                        zIndex: 9999,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                    }}
+                    className="fixed inset-0 bg-black bg-opacity-45 z-50 flex items-center justify-center p-4"
                     onClick={() => setSelectedSetId(null)}
                 >
                     <div
-                        style={{
-                            background: "#fff",
-                            borderRadius: 10,
-                            boxShadow: "0 4px 32px rgba(0,0,0,0.18)",
-                            maxWidth: 800,
-                            width: "90vw",
-                            maxHeight: "90vh",
-                            overflowY: "auto",
-                            position: "relative",
-                        }}
+                        className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto relative"
                         onClick={e => e.stopPropagation()}
                     >
                         <button
-                            style={{
-                                position: "absolute",
-                                top: 12,
-                                right: 18,
-                                background: "#fff",
-                                border: "1px solid #ccc",
-                                borderRadius: "50%",
-                                width: 32,
-                                height: 32,
-                                cursor: "pointer",
-                                fontWeight: "bold",
-                                color: "#d32f2f",
-                                fontSize: "1.5rem",
-                                zIndex: 2,
-                            }}
+                            className="absolute top-3 right-4 bg-white hover:bg-gray-100 border border-gray-300 rounded-full w-8 h-8 flex items-center justify-center font-bold text-red-600 text-xl z-10 transition-colors duration-200"
                             onClick={() => setSelectedSetId(null)}
                             title="Schließen"
                         >

@@ -12,6 +12,7 @@ export default function ProduktAnlegen() {
     const [isActiveValue, setIsActiveValue] = useState('');
     const navigate = useNavigate();
     const [showAreaIvs, setShowAreaIvs] = useState('');
+    const [priceConsidered, setPriceConsidered] = useState(false);
 
     useEffect(() => {
         loadDropdown(`${MAIN_VARIABLES.SERVER_URL}/api/sets`, 'setSelect');
@@ -140,6 +141,26 @@ export default function ProduktAnlegen() {
         console.log('HANDLE CHANGE IVS', e.target.value);
     }
 
+    function handlePriceConsideredChange(e) {
+        const isChecked = e.target.checked;
+        setPriceConsidered(isChecked);
+        
+        const priceInput = document.getElementById('price');
+        if (isChecked) {
+            // Checkbox angehakt: Feld ausgrauen und auf 0 setzen
+            priceInput.value = '0.00';
+            priceInput.disabled = true;
+            priceInput.style.backgroundColor = '#f0f0f0';
+            priceInput.style.color = '#999';
+        } else {
+            // Checkbox nicht angehakt: Feld aktivieren und leeren
+            priceInput.value = '';
+            priceInput.disabled = false;
+            priceInput.style.backgroundColor = '#f6f8fa';
+            priceInput.style.color = '#000';
+        }
+    }
+
     async function submitProduct(e) {
         e.preventDefault();
 
@@ -157,6 +178,7 @@ export default function ProduktAnlegen() {
             Designation: get('designationSelect'),
             SerialNumber: get('serial'),
             CostCenter: get('order'),
+            ProductValue: priceConsidered ? null : (parseFloat(get('price')) || 0),
             Department: get('room'),
             DeviceType: get('deviceType') || 'Normal',
             state: get('status'),
@@ -369,6 +391,54 @@ export default function ProduktAnlegen() {
                     <label htmlFor="order">Bestellnummer</label>
                     <a>Wie lautet die vom Haushalt vergebene Bestellnummer?</a>
                     <input id="order" required />
+                </li>
+                <li>
+                    <label htmlFor="price">Preis</label>
+                    <a>Wie hoch ist der Preis des Produkts in Euro?</a>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ position: 'relative', flex: 1 }}>
+                            <input 
+                                id="price" 
+                                type="number" 
+                                step="0.01" 
+                                min="0" 
+                                placeholder="0.00"
+                                disabled={priceConsidered}
+                                style={{ 
+                                    width: '100%', 
+                                    paddingRight: '30px',
+                                    padding: '0.5rem 30px 0.5rem 0.7rem',
+                                    border: '1px solid #d0d7de',
+                                    borderRadius: '6px',
+                                    fontSize: '1rem',
+                                    background: priceConsidered ? '#f0f0f0' : '#f6f8fa',
+                                    color: priceConsidered ? '#999' : '#000'
+                                }} 
+                            />
+                            <span style={{ 
+                                position: 'absolute', 
+                                right: '8px', 
+                                top: '50%', 
+                                transform: 'translateY(-50%)', 
+                                color: priceConsidered ? '#ccc' : '#666',
+                                pointerEvents: 'none'
+                            }}>€</span>
+                        </div>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
+                            <input 
+                                type="checkbox" 
+                                id="priceConsidered" 
+                                checked={priceConsidered}
+                                onChange={handlePriceConsideredChange}
+                            />
+                            Preis wurde bereits berücksichtigt
+                        </label>
+                    </div>
+                    {priceConsidered && (
+                        <small style={{ color: '#666', fontStyle: 'italic', marginTop: '4px' }}>
+                            Der eingegebene Preiswert wird nicht gespeichert, da er bereits berücksichtigt wurde.
+                        </small>
+                    )}
                 </li>
                 <li>
                     <label htmlFor="room">Raumnummer</label>
