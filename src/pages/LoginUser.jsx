@@ -54,6 +54,36 @@ const LoginUser = () => {
     return null;
   };
 
+  // Server-seitige Cookie-Abfrage (Alternative für HTTPS→HTTP Problem)
+  const getServerCookie = async () => {
+    try {
+      console.log('🔄 Versuche server-seitige Cookie-Abfrage...');
+      
+      const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/check-myoth-cookie`, {
+        method: 'GET',
+        credentials: 'include', // WICHTIG: Sendet Cookies mit der Anfrage
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+      console.log('📥 Server-Response:', data);
+      
+      if (data.success && data.fe_user) {
+        console.log('✅ Server fand fe_user Cookie!');
+        return data.fe_user;
+      } else {
+        console.log('❌ Server fand kein fe_user Cookie');
+        console.log('🔍 Verfügbare Cookies:', data.availableCookies);
+        return null;
+      }
+    } catch (error) {
+      console.error('❌ Fehler bei Server-Cookie-Check:', error);
+      return null;
+    }
+  };
+
   // Erweiterte Debug-Funktion für alle Cookies
   const debugCookies = () => {
     console.log('=== ERWEITERTE COOKIE DEBUG ===');
@@ -108,21 +138,28 @@ const LoginUser = () => {
       // Debug-Informationen ausgeben
       debugCookies();
       
-      // Erste Prüfung
+      // Methode 1: Client-seitige Cookie-Prüfung
       let feUserCookie = getCookieValue('fe_user');
       
-      // Falls Cookie nicht gefunden, mehrere Versuche mit Verzögerung
       if (!feUserCookie) {
-        setStatus('⏳ Cookie nicht sofort gefunden, warte 2 Sekunden...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        setStatus('⏳ Client-seitig nicht gefunden, versuche server-seitige Abfrage...');
         
-        feUserCookie = getCookieValue('fe_user');
+        // Methode 2: Server-seitige Cookie-Abfrage
+        feUserCookie = await getServerCookie();
         
         if (!feUserCookie) {
-          setStatus('⏳ Zweiter Versuch nach weiteren 3 Sekunden...');
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          setStatus('⏳ Warte 2 Sekunden und versuche erneut...');
+          await new Promise(resolve => setTimeout(resolve, 2000));
           
-          feUserCookie = getCookieValue('fe_user');
+          // Nochmal beide Methoden versuchen
+          feUserCookie = getCookieValue('fe_user') || await getServerCookie();
+          
+          if (!feUserCookie) {
+            setStatus('⏳ Letzter Versuch nach weiteren 3 Sekunden...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            feUserCookie = getCookieValue('fe_user') || await getServerCookie();
+          }
         }
       }
       
@@ -132,7 +169,7 @@ const LoginUser = () => {
         setAutoLoginAttempted(true);
         await sendLoginRequest(feUserCookie);
       } else {
-        setStatus('❌ fe_user Cookie nach mehreren Versuchen nicht gefunden.');
+        setStatus('❌ fe_user Cookie nicht gefunden (client + server versucht).');
         setShowManualInput(true);
       }
     };
@@ -206,16 +243,24 @@ const LoginUser = () => {
     setStatus('🔄 Neustart... Suche nach Cookie...');
   };
 
-  const handleManualCookieCheck = () => {
+  const handleManualCookieCheck = async () => {
     debugCookies();
-    const feUserCookie = getCookieValue('fe_user');
+    
+    // Erst client-seitig versuchen
+    let feUserCookie = getCookieValue('fe_user');
+    
+    if (!feUserCookie) {
+      setStatus('🔍 Client-seitig nicht gefunden, versuche server-seitig...');
+      feUserCookie = await getServerCookie();
+    }
+    
     if (feUserCookie) {
       setStatus('✅ Cookie bei manueller Prüfung gefunden!');
       setCookieValue(feUserCookie);
       sendLoginRequest(feUserCookie);
       setShowManualInput(false);
     } else {
-      setStatus('❌ Cookie auch bei manueller Prüfung nicht gefunden');
+      setStatus('❌ Cookie auch bei manueller Prüfung nicht gefunden (client + server)');
     }
   };
 
