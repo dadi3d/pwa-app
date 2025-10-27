@@ -35,6 +35,9 @@ export default function Einstellungen() {
     const [restoreFile, setRestoreFile] = useState(null);
     const [filesRestoreFile, setFilesRestoreFile] = useState(null);
     const [serverInfo, setServerInfo] = useState(null);
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [passwordInput, setPasswordInput] = useState('');
+    const [passwordCallback, setPasswordCallback] = useState(null);
 
     useEffect(() => {
         fetchSettings();
@@ -197,7 +200,7 @@ export default function Einstellungen() {
     }
 
     const handleBackupDownload = async () => {
-        const password = getBackupPassword();
+        const password = await getBackupPassword();
         if (!password) return;
 
         setBackupLoading(true);
@@ -238,7 +241,7 @@ export default function Einstellungen() {
     const handleBackupRestore = async () => {
         if (!restoreFile) return;
 
-        const password = getBackupPassword();
+        const password = await getBackupPassword();
         if (!password) return;
         
         setBackupLoading(true);
@@ -278,7 +281,7 @@ export default function Einstellungen() {
             return;
         }
 
-        const password = getBackupPassword();
+        const password = await getBackupPassword();
         if (!password) return;
         
         setBackupLoading(true);
@@ -309,7 +312,7 @@ export default function Einstellungen() {
     };
 
     const handleFilesBackupDownload = async () => {
-        const password = getBackupPassword();
+        const password = await getBackupPassword();
         if (!password) return;
 
         setFilesBackupLoading(true);
@@ -350,7 +353,7 @@ export default function Einstellungen() {
     const handleFilesBackupRestore = async () => {
         if (!filesRestoreFile) return;
 
-        const password = getBackupPassword();
+        const password = await getBackupPassword();
         if (!password) return;
         
         setFilesBackupLoading(true);
@@ -384,13 +387,32 @@ export default function Einstellungen() {
         }
     };
 
-    // Backup Password Helper - Popup-basiert
+    // Backup Password Helper - Modal-basiert mit verstecktem Passwort
     const getBackupPassword = () => {
-        const password = window.prompt('🔐 Backup-Passwort eingeben:', '');
-        if (!password || password.trim() === '') {
-            return null; // Benutzer hat abgebrochen oder kein Passwort eingegeben
+        return new Promise((resolve) => {
+            setPasswordInput('');
+            setPasswordCallback(() => resolve);
+            setShowPasswordModal(true);
+        });
+    };
+
+    const handlePasswordSubmit = () => {
+        const password = passwordInput.trim();
+        setShowPasswordModal(false);
+        setPasswordInput('');
+        if (passwordCallback) {
+            passwordCallback(password || null);
+            setPasswordCallback(null);
         }
-        return password.trim();
+    };
+
+    const handlePasswordCancel = () => {
+        setShowPasswordModal(false);
+        setPasswordInput('');
+        if (passwordCallback) {
+            passwordCallback(null);
+            setPasswordCallback(null);
+        }
     };
 
     // Status Badge Component
@@ -835,6 +857,64 @@ export default function Einstellungen() {
                     </div>
                 )}
             </div>
+
+            {/* Password Modal */}
+            {showPasswordModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                            Backup-Passwort eingeben
+                        </h3>
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            if (passwordCallback) {
+                                passwordCallback(passwordInput);
+                                setPasswordCallback(null);
+                            }
+                            setShowPasswordModal(false);
+                            setPasswordInput('');
+                        }}>
+                            <div className="mb-4">
+                                <label htmlFor="backup-password" className="block text-sm font-medium text-gray-700 mb-2">
+                                    Passwort
+                                </label>
+                                <input
+                                    id="backup-password"
+                                    type="password"
+                                    value={passwordInput}
+                                    onChange={(e) => setPasswordInput(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Backup-Passwort eingeben"
+                                    autoFocus
+                                    required
+                                />
+                            </div>
+                            <div className="flex justify-end space-x-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (passwordCallback) {
+                                            passwordCallback(null);
+                                            setPasswordCallback(null);
+                                        }
+                                        setShowPasswordModal(false);
+                                        setPasswordInput('');
+                                    }}
+                                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                                >
+                                    Abbrechen
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    Bestätigen
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
