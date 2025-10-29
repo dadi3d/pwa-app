@@ -47,16 +47,17 @@ export default function Produkte() {
       const filteredSets = data.filter(set => set.set_number === 1);
       setSets(filteredSets);
       
-      // Thumbnail-URLs für alle Sets laden
+      // Thumbnail-URLs für alle Sets laden mit imgproxy-Optimierung
       const thumbnails = {};
       for (const set of filteredSets) {
         try {
           const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
           const thumbnailData = await thumbnailRes.json();
-          thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`;
+          // Verwende imgproxy für optimierte Bilder: 500x500 WebP
+          thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}/api/images${thumbnailData.path.replace('/api/', '/')}?width=500&height=500&resize=fill&format=webp&quality=85`;
         } catch (err) {
           console.error(`Fehler beim Laden des Thumbnails für Set ${set._id}:`, err);
-          thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
+          thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}/api/images/files/images/placeholder_set.jpg?width=500&height=500&format=webp`;
         }
       }
       setThumbnailUrls(thumbnails);
@@ -415,7 +416,7 @@ export default function Produkte() {
           const brand = p.manufacturer?.name || "–";
           const category = p.category?.name?.de || "–";
           const setName = p.set_name?.name?.de || "–";
-          const thumbnailUrl = thumbnailUrls[p._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
+          const thumbnailUrl = thumbnailUrls[p._id] || `${MAIN_VARIABLES.SERVER_URL}/api/images/files/images/placeholder_set.jpg?width=500&height=500&format=webp`;
           
           // Alle Sets dieser Kombination finden
           const allSetsOfThisType = allSets.filter(set => 
@@ -462,6 +463,8 @@ export default function Produkte() {
                   src={thumbnailUrl}
                   alt={`${brand} ${setName} Thumbnail`}
                   className="w-60 h-60 object-cover rounded-lg border border-gray-200 bg-white shadow-sm mx-auto"
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
               <div className="font-semibold text-lg py-3 px-5 border-b border-gray-200 text-gray-800 transition-all duration-200 tracking-wide bg-gray-50 group-hover:bg-gray-100">
@@ -507,9 +510,11 @@ export default function Produkte() {
               <h3 className="text-lg font-semibold mb-4 text-gray-800">Bilder</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <img
-                  src={thumbnailUrls[selectedSet._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`}
+                  src={thumbnailUrls[selectedSet._id]?.replace('width=500&height=500', 'width=800&height=800') || `${MAIN_VARIABLES.SERVER_URL}/api/images/files/images/placeholder_set.jpg?width=800&height=800&format=webp`}
                   alt={`${selectedSet.manufacturer?.name || "–"} ${selectedSet.set_name?.name?.de || "–"}`}
                   className="w-full aspect-square object-cover rounded-lg border border-gray-200 bg-white shadow-sm"
+                  loading="lazy"
+                  decoding="async"
                 />
                 {/* Hier können weitere Bilder hinzugefügt werden, wenn verfügbar */}
               </div>
