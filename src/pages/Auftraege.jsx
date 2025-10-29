@@ -12,6 +12,7 @@ export default function Auftraege() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [enrichedSets, setEnrichedSets] = useState({});
+  const [thumbnailUrls, setThumbnailUrls] = useState({}); // Cache für Thumbnail-URLs
   const token = useAuth(state => state.token);
   const navigate = useNavigate();
 
@@ -74,7 +75,7 @@ export default function Auftraege() {
   );
 
   // Popup Funktionen
-  const openOrderDetails = (order) => {
+  const openOrderDetails = async (order) => {
     setSelectedOrder(order);
     setShowOrderDetails(true);
     
@@ -86,6 +87,27 @@ export default function Auftraege() {
         console.log(`Set ${index + 1} - manufacturer:`, set.manufacturer);
         console.log(`Set ${index + 1} - set_name:`, set.set_name.name.de);
       });
+      
+      // Thumbnail-URLs für Sets laden, falls noch nicht vorhanden
+      for (const set of order.sets) {
+        const setId = set._id || set.id;
+        if (setId && !thumbnailUrls[setId]) {
+          try {
+            const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${setId}`);
+            const thumbnailData = await thumbnailRes.json();
+            setThumbnailUrls(prev => ({
+              ...prev,
+              [setId]: `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`
+            }));
+          } catch (err) {
+            console.error(`Fehler beim Laden des Thumbnails für Set ${setId}:`, err);
+            setThumbnailUrls(prev => ({
+              ...prev,
+              [setId]: `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`
+            }));
+          }
+        }
+      }
     }
   };
 
@@ -282,22 +304,26 @@ export default function Auftraege() {
                 </h4>
                 {selectedOrder.sets && selectedOrder.sets.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {selectedOrder.sets.map((set, index) => (
-                      <div key={index} className="bg-white rounded-lg p-3 border border-orange-200">
-                        <div className="flex items-start gap-3">
-                          {/* Thumbnail */}
-                          <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
-                            <img
-                              src={`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id || set.id}`}
-                              alt={set.set_name?.name || set.name || 'Set'}
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                            <div className="w-full h-full bg-gray-200 items-center justify-center text-gray-400 text-xs hidden">
-                              Kein Bild
+                    {selectedOrder.sets.map((set, index) => {
+                      const setId = set._id || set.id;
+                      const thumbnailUrl = thumbnailUrls[setId] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
+                      
+                      return (
+                        <div key={index} className="bg-white rounded-lg p-3 border border-orange-200">
+                          <div className="flex items-start gap-3">
+                            {/* Thumbnail */}
+                            <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                              <img
+                                src={thumbnailUrl}
+                                alt={set.set_name?.name || set.name || 'Set'}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                              />
+                              <div className="w-full h-full bg-gray-200 items-center justify-center text-gray-400 text-xs hidden">
+                                Kein Bild
                             </div>
                           </div>
                           
@@ -317,7 +343,8 @@ export default function Auftraege() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 ) : (
                   <p className="text-sm text-gray-600">Keine Sets zugewiesen</p>

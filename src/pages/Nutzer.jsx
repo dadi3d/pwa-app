@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { MAIN_VARIABLES } from '../config';
+import { useAuth, fetchUserData } from './services/auth';
 
 export default function Nutzer() {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [updatedUserId, setUpdatedUserId] = useState(null);
     const [filter, setFilter] = useState(''); // Filter-Status
+
+    const [userId, setUserId] = useState('');
+    const [userRole, setUserRole] = useState('student');
+    const token = useAuth(state => state.token);
 
     useEffect(() => {
         fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`)
@@ -14,7 +19,23 @@ export default function Nutzer() {
                 setUsers(data);
                 setLoading(false);
             });
-    }, []);
+        fetchUserId();
+    }, [token]);
+
+    // Benutzer-ID aus JWT holen
+    async function fetchUserId() {
+        try {
+            const userData = await fetchUserData();
+            if(userData) {
+                setUserId(userData.id);
+                if(userData.role) {
+                    setUserRole(userData.role);
+                }
+            }
+        } catch (err) {
+            setUserId('');
+        }
+    }
 
     const handleRoleChange = async (id, newRole) => {
         await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/${id}`, {

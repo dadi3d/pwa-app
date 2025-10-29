@@ -24,6 +24,7 @@ function AuftragEditAdmin({ orderId, onSuccess }) {
   const [states, setStates] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [editFields, setEditFields] = useState({});
+  const [thumbnailUrls, setThumbnailUrls] = useState({}); // Cache für Thumbnail-URLs
   const token = useAuth(s => s.token);
 
   function getId(val) {
@@ -40,6 +41,22 @@ function AuftragEditAdmin({ orderId, onSuccess }) {
         const orders = await res.json();
         const found = orders.find(o => o._id === currentOrderId);
         setOrder(found || null);
+        
+        // Thumbnail-URLs für Sets laden
+        if (found && found.sets && found.sets.length > 0) {
+          const thumbnails = {};
+          for (const set of found.sets) {
+            try {
+              const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
+              const thumbnailData = await thumbnailRes.json();
+              thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`;
+            } catch (err) {
+              console.error(`Fehler beim Laden des Thumbnails für Set ${set._id}:`, err);
+              thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
+            }
+          }
+          setThumbnailUrls(thumbnails);
+        }
       } catch {
         setOrder(null);
       }
@@ -315,7 +332,7 @@ function AuftragEditAdmin({ orderId, onSuccess }) {
           {order.sets.map((set, idx) => (
             <div key={set._id} style={{ border: '1px solid #ccc', borderRadius: 8, padding: 16, minWidth: 260 }}>
               <img
-                src={`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`}
+                src={thumbnailUrls[set._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`}
                 alt="Set-Thumbnail"
                 style={{ width: 120, height: 120, objectFit: 'cover', borderRadius: 6, marginBottom: 8 }}
               />

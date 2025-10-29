@@ -3,6 +3,7 @@ import { MAIN_VARIABLES } from '../../config';
 import ProductEdit from './ProductEdit';
 import { Button } from '../../styles/catalyst/button';
 import { Dialog, DialogTitle, DialogBody, DialogActions } from '../../styles/catalyst/dialog';
+import { useAuth, fetchUserData } from '../services/auth';
 
 export default function SetProdukte() {
     const [selectedProductId, setSelectedProductId] = useState(null);
@@ -12,16 +13,37 @@ export default function SetProdukte() {
     const [selectedSet, setSelectedSet] = useState(null);
     const [setProducts, setSetProducts] = useState([]);
     const [isSetModalOpen, setIsSetModalOpen] = useState(false);
+    const [thumbnailUrl, setThumbnailUrl] = useState(''); // URL für aktuelles Set-Thumbnail
     const [filters, setFilters] = useState({
         category: '',
         set: '',
         isActive: ''
     });
 
+    const [userId, setUserId] = useState('');
+    const [userRole, setUserRole] = useState('student');
+    const token = useAuth(state => state.token);
+
     useEffect(() => {
         loadFilters();
         loadProducts();
-    }, []);
+        fetchUserId();
+    }, [token]);
+
+    // Benutzer-ID aus JWT holen
+    async function fetchUserId() {
+        try {
+            const userData = await fetchUserData();
+            if(userData) {
+                setUserId(userData.id);
+                if(userData.role) {
+                    setUserRole(userData.role);
+                }
+            }
+        } catch (err) {
+            setUserId('');
+        }
+    }
 
     async function loadFilters() {
         // Kategorien laden
@@ -69,6 +91,16 @@ export default function SetProdukte() {
             const productsRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=${setId}`);
             const productsData = await productsRes.json();
             setSetProducts(productsData);
+            
+            // Thumbnail-URL laden
+            try {
+                const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${setId}`);
+                const thumbnailData = await thumbnailRes.json();
+                setThumbnailUrl(`${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`);
+            } catch (err) {
+                console.error(`Fehler beim Laden des Thumbnails:`, err);
+                setThumbnailUrl(`${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`);
+            }
             
             setIsSetModalOpen(true);
         } catch (err) {
@@ -380,11 +412,11 @@ export default function SetProdukte() {
                             {/* Thumbnail */}
                             <div className="flex justify-center bg-gray-50 p-6 rounded-lg border border-gray-200">
                                 <img
-                                    src={`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${selectedSet._id}`}
+                                    src={thumbnailUrl || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`}
                                     alt={`${selectedSet.manufacturer?.name} ${selectedSet.set_name?.name?.de || selectedSet.set_name?.name} Thumbnail`}
                                     className="w-80 h-80 object-cover rounded-lg border border-gray-300 bg-white shadow-md"
                                     onError={(e) => {
-                                        e.target.src = `${MAIN_VARIABLES.SERVER_URL}/data/placeholder/placeholder_set.jpg`;
+                                        e.target.src = `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
                                     }}
                                 />
                             </div>

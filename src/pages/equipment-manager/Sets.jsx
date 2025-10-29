@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { MAIN_VARIABLES } from "../../config";
 import SetEdit from "./SetEdit"; // Import für Lightbox
+import { useAuth, fetchUserData } from '../services/auth';
 
 const API_SETS = `${MAIN_VARIABLES.SERVER_URL}/api/sets`;
 const API_BRANDS = `${MAIN_VARIABLES.SERVER_URL}/api/brands`;
@@ -18,6 +19,11 @@ export default function Sets() {
     const [selectedSetId, setSelectedSetId] = useState(null); // Für Lightbox
     const [setValues, setSetValues] = useState({}); // Für Set-Werte
     const [expandedGroup, setExpandedGroup] = useState(null); // Für Gruppen-Flyout
+    const [thumbnailUrls, setThumbnailUrls] = useState({}); // Cache für Thumbnail-URLs
+
+    const [userId, setUserId] = useState('');
+    const [userRole, setUserRole] = useState('student');
+    const token = useAuth(state => state.token);
 
     useEffect(() => {
         async function loadFilters() {
@@ -27,7 +33,23 @@ export default function Sets() {
             setCategories(await categoryRes.json());
         }
         loadFilters();
-    }, []);
+        fetchUserId();
+    }, [token]);
+
+    // Benutzer-ID aus JWT holen
+    async function fetchUserId() {
+        try {
+            const userData = await fetchUserData();
+            if(userData) {
+                setUserId(userData.id);
+                if(userData.role) {
+                    setUserRole(userData.role);
+                }
+            }
+        } catch (err) {
+            setUserId('');
+        }
+    }
 
     useEffect(() => {
         if (selectedSetId) {
@@ -70,6 +92,20 @@ export default function Sets() {
 
             // Alle Set-Werte laden
             await loadAllSetValues(sets);
+            
+            // Thumbnail-URLs für alle Sets laden
+            const thumbnails = {};
+            for (const set of sets) {
+                try {
+                    const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
+                    const thumbnailData = await thumbnailRes.json();
+                    thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`;
+                } catch (err) {
+                    console.error(`Fehler beim Laden des Thumbnails für Set ${set._id}:`, err);
+                    thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
+                }
+            }
+            setThumbnailUrls(thumbnails);
 
             const urlParams = new URLSearchParams(window.location.search);
             const brand = urlParams.get("manufacturer");
@@ -224,7 +260,7 @@ export default function Sets() {
                 {sortedGroups.map(([groupKey, group]) => {
                     // Thumbnail des ersten Sets in der Gruppe verwenden
                     const firstSet = group.sets[0];
-                    const thumbnailUrl = `${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${firstSet._id}`;
+                    const thumbnailUrl = thumbnailUrls[firstSet._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
                     
                     return (
                     <div key={groupKey} className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -264,7 +300,7 @@ export default function Sets() {
                                     const category = p.category?.name?.de || "–";
                                     const setName = p.set_name?.name?.de || "–";
                                     const setNr = p.set_number ?? "–";
-                                    const thumbnailUrl = `${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${p._id}`;
+                                    const thumbnailUrl = thumbnailUrls[p._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
                                     return (
                                         <div
                                             className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 flex cursor-pointer"

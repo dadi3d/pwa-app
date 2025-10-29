@@ -3,6 +3,7 @@ import { FileManager } from "@cubone/react-file-manager";
 import "@cubone/react-file-manager/dist/style.css";
 import './FileManager.css';
 import { MAIN_VARIABLES } from "../config";
+import { useAuth, fetchUserData } from './services/auth';
 
 // Bild-Vorschau-Komponente
 const CustomImagePreviewer = ({ file }) => {
@@ -21,6 +22,10 @@ const CustomImagePreviewer = ({ file }) => {
 
 function App() {
   const [files, setFiles] = useState([]);
+  
+  const [userId, setUserId] = useState('');
+  const [userRole, setUserRole] = useState('student');
+  const token = useAuth(state => state.token);
 
   // Datenstruktur vom Server abrufen
   useEffect(() => {
@@ -34,7 +39,23 @@ function App() {
       }
     }
     fetchDataStructure();
-  }, []);
+    fetchUserId();
+  }, [token]);
+
+  // Benutzer-ID aus JWT holen
+  async function fetchUserId() {
+    try {
+      const userData = await fetchUserData();
+      if(userData) {
+        setUserId(userData.id);
+        if(userData.role) {
+          setUserRole(userData.role);
+        }
+      }
+    } catch (err) {
+      setUserId('');
+    }
+  }
 
   const handleRefresh = async () => {
   console.log("Aktualisiere Datenstruktur...");

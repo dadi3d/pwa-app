@@ -7,6 +7,7 @@ import { Dropdown, DropdownButton, DropdownMenu, DropdownItem } from "../styles/
 import { ChevronDownIcon } from "@heroicons/react/16/solid";
 import { Calendar } from 'vanilla-calendar-pro';
 import 'vanilla-calendar-pro/styles/index.css';
+import { useAuth, fetchUserData } from './services/auth';
 
 // API Endpunkte wie im Backend
 const API_SETS = `${MAIN_VARIABLES.SERVER_URL}/api/sets`;
@@ -19,6 +20,7 @@ export default function Produkte() {
   const [sets, setSets] = useState([]);
   const [allSets, setAllSets] = useState([]); // Alle Sets für die Set-Anzahl-Berechnung
   const [productsBySet, setProductsBySet] = useState({});
+  const [thumbnailUrls, setThumbnailUrls] = useState({}); // Thumbnail-URLs für Sets
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSet, setSelectedSet] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -28,6 +30,10 @@ export default function Produkte() {
   const [unavailableSets, setUnavailableSets] = useState([]);
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
   const calendarRef = useRef(null);
+
+  const [userId, setUserId] = useState('');
+  const [userRole, setUserRole] = useState('student');
+  const token = useAuth(state => state.token);
 
   // Sets laden
   useEffect(() => {
@@ -40,9 +46,39 @@ export default function Produkte() {
       // Nur Sets mit Nummer 1 für die Anzeige filtern
       const filteredSets = data.filter(set => set.set_number === 1);
       setSets(filteredSets);
+      
+      // Thumbnail-URLs für alle Sets laden
+      const thumbnails = {};
+      for (const set of filteredSets) {
+        try {
+          const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
+          const thumbnailData = await thumbnailRes.json();
+          thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`;
+        } catch (err) {
+          console.error(`Fehler beim Laden des Thumbnails für Set ${set._id}:`, err);
+          thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
+        }
+      }
+      setThumbnailUrls(thumbnails);
     }
     loadSets();
-  }, []);
+    fetchUserId();
+  }, [token]);
+
+  // Benutzer-ID aus JWT holen
+  async function fetchUserId() {
+    try {
+      const userData = await fetchUserData();
+      if(userData) {
+        setUserId(userData.id);
+        if(userData.role) {
+          setUserRole(userData.role);
+        }
+      }
+    } catch (err) {
+      setUserId('');
+    }
+  }
 
   // Verfügbarkeit der Sets für den ausgewählten Zeitraum prüfen
   const checkAvailability = async (startDate, endDate) => {
@@ -379,7 +415,7 @@ export default function Produkte() {
           const brand = p.manufacturer?.name || "–";
           const category = p.category?.name?.de || "–";
           const setName = p.set_name?.name?.de || "–";
-          const thumbnailUrl = `${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${p._id}`;
+          const thumbnailUrl = thumbnailUrls[p._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
           
           // Alle Sets dieser Kombination finden
           const allSetsOfThisType = allSets.filter(set => 
@@ -471,7 +507,7 @@ export default function Produkte() {
               <h3 className="text-lg font-semibold mb-4 text-gray-800">Bilder</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 <img
-                  src={`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${selectedSet._id}`}
+                  src={thumbnailUrls[selectedSet._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`}
                   alt={`${selectedSet.manufacturer?.name || "–"} ${selectedSet.set_name?.name?.de || "–"}`}
                   className="w-full aspect-square object-cover rounded-lg border border-gray-200 bg-white shadow-sm"
                 />

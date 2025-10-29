@@ -3,6 +3,7 @@ import { MAIN_VARIABLES } from "../config";
 import { SettingsService } from "./services/Settings.js";
 import { Button } from "../styles/catalyst/button";
 import packageJson from '../../package.json';
+import { useAuth, fetchUserData } from './services/auth';
 
 const weekdays = [
   "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
@@ -28,6 +29,10 @@ export default function Einstellungen() {
     const [mongoStatus, setMongoStatus] = useState({ status: 'checking', label: 'Prüfe...' });
     const [dbStatus, setDbStatus] = useState(null);
     const [filesStatus, setFilesStatus] = useState(null);
+
+    const [userId, setUserId] = useState('');
+    const [userRole, setUserRole] = useState('student');
+    const token = useAuth(state => state.token);
     const [backupLoading, setBackupLoading] = useState(false);
     const [backupMessage, setBackupMessage] = useState("");
     const [filesBackupLoading, setFilesBackupLoading] = useState(false);
@@ -46,7 +51,23 @@ export default function Einstellungen() {
         fetchFilesStatus();
         fetchEvents();
         fetchServerInfo();
-    }, []);
+        fetchUserId();
+    }, [token]);
+
+    // Benutzer-ID aus JWT holen
+    async function fetchUserId() {
+        try {
+            const userData = await fetchUserData();
+            if(userData) {
+                setUserId(userData.id);
+                if(userData.role) {
+                    setUserRole(userData.role);
+                }
+            }
+        } catch (err) {
+            setUserId('');
+        }
+    }
 
     async function fetchSettings() {
         setLoading(true);

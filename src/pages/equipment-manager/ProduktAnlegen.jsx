@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MAIN_VARIABLES } from '../../config';
+import { useAuth, fetchUserData } from '../services/auth';
 
 export default function ProduktAnlegen() {
     const messageRef = useRef();
@@ -13,6 +14,10 @@ export default function ProduktAnlegen() {
     const navigate = useNavigate();
     const [showAreaIvs, setShowAreaIvs] = useState('');
     const [priceConsidered, setPriceConsidered] = useState(false);
+
+    const [userId, setUserId] = useState('');
+    const [userRole, setUserRole] = useState('student');
+    const token = useAuth(state => state.token);
 
     useEffect(() => {
         loadDropdown(`${MAIN_VARIABLES.SERVER_URL}/api/sets`, 'setSelect');
@@ -34,7 +39,23 @@ export default function ProduktAnlegen() {
             setRoomOptions([]); // Räume leer lassen
             setSelectedSet(''); // Keine Vorauswahl
             });
-    }, []);
+        fetchUserId();
+    }, [token]);
+
+    // Benutzer-ID aus JWT holen
+    async function fetchUserId() {
+        try {
+            const userData = await fetchUserData();
+            if(userData) {
+                setUserId(userData.id);
+                if(userData.role) {
+                    setUserRole(userData.role);
+                }
+            }
+        } catch (err) {
+            setUserId('');
+        }
+    }
 
     async function loadDropdown(endpoint, selectId, isInterval = false, isState = false, isActiveStatus = false) {
         try {

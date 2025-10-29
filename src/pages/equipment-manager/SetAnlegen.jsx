@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { MAIN_VARIABLES } from "../../config";
+import { useAuth, fetchUserData } from '../services/auth';
 
 export default function SetAnlegen() {
   // Dropdown-States
@@ -13,6 +14,10 @@ export default function SetAnlegen() {
   // Auswahl-States
   const [brand, setBrand] = useState("");
   const [setName, setSetName] = useState("");
+
+  const [userId, setUserId] = useState('');
+  const [userRole, setUserRole] = useState('student');
+  const token = useAuth(state => state.token);
   const [category, setCategory] = useState("");
   const [setState, setSetState] = useState("");
   const [setAssignment, setSetAssignment] = useState("");
@@ -61,7 +66,23 @@ export default function SetAnlegen() {
     fetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data`)
       .then(r => r.json())
       .then(setFileDatas);
-  }, []);
+    fetchUserId();
+  }, [token]);
+
+  // Benutzer-ID aus JWT holen
+  async function fetchUserId() {
+    try {
+      const userData = await fetchUserData();
+      if(userData) {
+        setUserId(userData.id);
+        if(userData.role) {
+          setUserRole(userData.role);
+        }
+      }
+    } catch (err) {
+      setUserId('');
+    }
+  }
 
   // Hilfsfunktion: passende Files filtern
   function getMatchingFiles(type) {

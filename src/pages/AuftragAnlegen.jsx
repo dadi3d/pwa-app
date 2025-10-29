@@ -18,6 +18,7 @@ export default function AuftragAnlegen() {
   // Original states
   const [sets, setSets] = useState([]);
   const [allSets, setAllSets] = useState([]); // Alle Sets für die Set-Anzahl-Berechnung
+  const [thumbnailUrls, setThumbnailUrls] = useState({}); // Thumbnail-URLs für Sets
   const [orderTypes, setOrderTypes] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [settings, setSettings] = useState(null);
@@ -232,12 +233,26 @@ export default function AuftragAnlegen() {
     // Sets laden - nur verfügbare Sets (ohne Status "nicht verfügbar")
     fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/available`)
       .then((r) => r.json())
-      .then((data) => {
+      .then(async (data) => {
         // Alle verfügbaren Sets für Set-Anzahl-Berechnung speichern
         setAllSets(data);
         // Nur Sets mit Nummer 1 für die Anzeige filtern
         const filteredSets = data.filter(set => set.set_number === 1);
         setSets(filteredSets);
+        
+        // Thumbnail-URLs für alle Sets laden
+        const thumbnails = {};
+        for (const set of filteredSets) {
+          try {
+            const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
+            const thumbnailData = await thumbnailRes.json();
+            thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`;
+          } catch (err) {
+            console.error(`Fehler beim Laden des Thumbnails für Set ${set._id}:`, err);
+            thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
+          }
+        }
+        setThumbnailUrls(thumbnails);
       });
       
     fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderTypes`)
@@ -1036,7 +1051,7 @@ export default function AuftragAnlegen() {
                           const set = sets.find(s => s._id === setId);
                           if (!set) return null;
                           
-                          const thumbnailUrl = `${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`;
+                          const thumbnailUrl = thumbnailUrls[set._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
                           
                           return (
                             <div key={setId} className="flex items-start gap-3 p-3 bg-orange-50 rounded-lg border border-orange-200">
@@ -1179,7 +1194,7 @@ export default function AuftragAnlegen() {
                     
                     const selectedCount = getSelectedCountForSetType(set.manufacturer?.name, set.set_name?.name?.de);
                     const isAnySelected = selectedCount > 0;
-                    const thumbnailUrl = `${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`;
+                    const thumbnailUrl = thumbnailUrls[set._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/data/placeholder/placeholder_set.jpg`;
                     
                     return (
                       <div

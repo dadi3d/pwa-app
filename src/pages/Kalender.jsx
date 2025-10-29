@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useAuth } from './services/auth';
+import { useAuth, fetchUserData } from './services/auth';
 import { MAIN_VARIABLES } from '../config';
 import AuftragEditAdmin from './order-manager/AuftragEditAdmin';
 
@@ -149,6 +149,9 @@ export default function Kalender() {
   const [userCache, setUserCache] = useState({});
   const scrollRef = useRef(null);
 
+  const [userId, setUserId] = useState('');
+  const [userRole, setUserRole] = useState('student');
+
   // Hilfsfunktion: Userdaten nachladen und cachen (per ObjectID)
   const getUserDisplay = async (objectId) => {
     if (!objectId) return '-';
@@ -207,8 +210,24 @@ export default function Kalender() {
     }
     if (token) {
       loadOrders();
+      fetchUserId();
     }
   }, [token, currentYear]);
+
+  // Benutzer-ID aus JWT holen
+  async function fetchUserId() {
+    try {
+      const userData = await fetchUserData();
+      if(userData) {
+        setUserId(userData.id);
+        if(userData.role) {
+          setUserRole(userData.role);
+        }
+      }
+    } catch (err) {
+      setUserId('');
+    }
+  }
 
   // Filter-Effekt
   useEffect(() => {

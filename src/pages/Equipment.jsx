@@ -1,9 +1,32 @@
 import { useEffect, useState } from "react";
 import "./Equipment.css";
 import { MAIN_VARIABLES } from "../config";
+import { useAuth, fetchUserData } from './services/auth';
 
 
 const EquipmentManagerMenu = () => {
+    const [userId, setUserId] = useState('');
+    const [userRole, setUserRole] = useState('student');
+    const token = useAuth(state => state.token);
+
+    useEffect(() => {
+        fetchUserId();
+    }, [token]);
+
+    // Benutzer-ID aus JWT holen
+    async function fetchUserId() {
+        try {
+            const userData = await fetchUserData();
+            if(userData) {
+                setUserId(userData.id);
+                if(userData.role) {
+                    setUserRole(userData.role);
+                }
+            }
+        } catch (err) {
+            setUserId('');
+        }
+    }
 
     return (
         <div className="body">
