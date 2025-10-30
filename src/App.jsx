@@ -148,29 +148,25 @@ function App() {
           <Route path="/logout" element={<Logout />} />
           <Route path="/auftrag-anlegen" element={<AuftragAnlegen />} />
           
-          {/* System Settings und Equipment nur für admin und employee */}
-          {(userRole === 'admin' || userRole === 'employee') && (
-            <>
-              <Route path="/einstellungen" element={<Einstellungen />} />
-              <Route path="/equipment" element={<EquipmentManagerMenu />} />
-              <Route path="/kalender" element={<Kalender />} />
-              <Route path="/nutzer" element={<Nutzer />} />
-              <Route path="/hersteller" element={<HerstellerManager />} />
-              <Route path="/sets" element={<Sets />} />
-              <Route path="/kategorien" element={<SetKategorien />} />
-              <Route path="/set-bezeichnungen" element={<SetBezeichnungen />} />
-              <Route path="/set-anlegen" element={<SetAnlegen />} />
-              <Route path="/set-produkte" element={<SetProdukte />} />
-              <Route path="/produkt-kategorien" element={<ProduktKategorien />} />
-              <Route path="/produkt-anlegen" element={<ProduktAnlegen />} />
-              <Route path="/auftraege-admin" element={<AuftraegeAdmin />} />
-              <Route path="/auftrag-anlegen-admin" element={<AuftragAnlegenAdmin />} />
-              <Route path="/orderEdit/:objectID" element={<AuftragEditAdmin />} />
-              <Route path="/file-manager" element={<FileManager />} />
-              <Route path="/set-edit/:setId" element={<SetEdit />} />
-              <Route path="/set-copy/:set" element={<SetCopy />} />
-            </>
-          )}
+          {/* Admin/Employee Routen - basierend auf authMethod 'local' */}
+          <Route path="/einstellungen" element={<Einstellungen />} />
+          <Route path="/equipment" element={<EquipmentManagerMenu />} />
+          <Route path="/kalender" element={<Kalender />} />
+          <Route path="/nutzer" element={<Nutzer />} />
+          <Route path="/hersteller" element={<HerstellerManager />} />
+          <Route path="/sets" element={<Sets />} />
+          <Route path="/kategorien" element={<SetKategorien />} />
+          <Route path="/set-bezeichnungen" element={<SetBezeichnungen />} />
+          <Route path="/set-anlegen" element={<SetAnlegen />} />
+          <Route path="/set-produkte" element={<SetProdukte />} />
+          <Route path="/produkt-kategorien" element={<ProduktKategorien />} />
+          <Route path="/produkt-anlegen" element={<ProduktAnlegen />} />
+          <Route path="/auftraege-admin" element={<AuftraegeAdmin />} />
+          <Route path="/auftrag-anlegen-admin" element={<AuftragAnlegenAdmin />} />
+          <Route path="/orderEdit/:objectID" element={<AuftragEditAdmin />} />
+          <Route path="/file-manager" element={<FileManager />} />
+          <Route path="/set-edit/:setId" element={<SetEdit />} />
+          <Route path="/set-copy/:set" element={<SetCopy />} />
         </Routes>
       </div>
       <DebugMenu />

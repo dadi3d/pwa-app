@@ -36,10 +36,19 @@ export default function Login() {
       })
       .then(res => {
         if (res.ok) {
-          // Token ist gültig - weiterleiten zur Admin-Startseite
+          return res.json();
+        } else {
+          throw new Error('Token ungültig');
+        }
+      })
+      .then(data => {
+        // Prüfe ob es ein lokaler Admin-User ist
+        if (data.payload?.authMethod === 'local') {
+          // Token ist gültig und User ist lokal - weiterleiten zur Admin-Startseite
           window.location.href = '/equipment';
         } else {
-          // Token ungültig - logout und auf Admin-Login-Seite bleiben
+          // OTH-User hat sich auf Admin-Seite verirrt - Token löschen und logout
+          console.log('OTH-User auf Admin-Login - Token gelöscht');
           setAuth(null);
         }
       })

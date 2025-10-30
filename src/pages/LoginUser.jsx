@@ -17,10 +17,31 @@ const LoginUser = () => {
   // Wenn bereits ein gültiger Token vorhanden ist, direkt weiterleiten
   useEffect(() => {
     if (token) {
-      console.log('Bereits eingeloggt, leite zu /home weiter');
-      navigate('/home');
+      // Token validieren und authMethod prüfen
+      fetch(`${MAIN_VARIABLES.SERVER_URL}/api/jwt-payload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(res => res.ok ? res.json() : Promise.reject('Token ungültig'))
+      .then(data => {
+        if (data.payload?.authMethod === 'oth') {
+          console.log('OTH-User bereits eingeloggt, leite zu /home weiter');
+          navigate('/home');
+        } else {
+          // Lokaler User hat sich auf MyOTH-Seite verirrt - Token löschen
+          console.log('Lokaler User auf MyOTH-Login - Token gelöscht');
+          setAuth(null);
+        }
+      })
+      .catch(() => {
+        // Token ungültig - löschen
+        setAuth(null);
+      });
     }
-  }, [token, navigate]);
+  }, [token, navigate, setAuth]);
 
   // Erweiterte Funktion zum Abrufen des fe_user Cookies
   const getCookieValue = (cookieName) => {
