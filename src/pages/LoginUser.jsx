@@ -28,16 +28,18 @@ const LoginUser = () => {
       .then(res => res.ok ? res.json() : Promise.reject('Token ungültig'))
       .then(data => {
         if (data.payload?.authMethod === 'oth') {
-          console.log('OTH-User bereits eingeloggt, leite zu /home weiter');
+          console.log('✅ OTH-User bereits eingeloggt, leite zu /home weiter');
           navigate('/home');
         } else {
-          // Lokaler User hat sich auf MyOTH-Seite verirrt - Token löschen
-          console.log('Lokaler User auf MyOTH-Login - Token gelöscht');
+          // Lokaler Admin-User hat sich auf MyOTH-Seite verirrt - Token löschen und WARNUNG
+          console.log('🚫 Lokaler Admin-User auf MyOTH-Login erkannt - Token gelöscht');
           setAuth(null);
+          setStatus('❌ Admin-User können sich nicht über MyOTH anmelden. Bitte verwenden Sie /admin');
         }
       })
       .catch(() => {
         // Token ungültig - löschen
+        console.log('Token ungültig - gelöscht');
         setAuth(null);
       });
     }

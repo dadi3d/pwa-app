@@ -9,9 +9,8 @@ import { Calendar } from 'vanilla-calendar-pro';
 import 'vanilla-calendar-pro/styles/index.css';
 import { useAuth, fetchUserData } from './services/auth';
 
-// API Endpunkte wie im Backend
-const API_SETS = `${MAIN_VARIABLES.SERVER_URL}/api/sets`;
-const API_SETS_AVAILABLE = `${MAIN_VARIABLES.SERVER_URL}/api/sets/available`; // Neue Route für verfügbare Sets
+// API Endpunkte - Angepasst für OTH-User
+const API_SETS_AVAILABLE = `${MAIN_VARIABLES.SERVER_URL}/api/user-sets/available`; // Neue Route für OTH-User
 const API_SINGLE_PRODUCTS = `${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=`;
 const API_CHECK_AVAILABILITY = `${MAIN_VARIABLES.SERVER_URL}/api/orders/check-availability`;
 

@@ -159,7 +159,12 @@ export default function Kalender() {
       return userCache[objectId].id;
     }
     try {
-      const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/byObjectId/${objectId}`);
+      const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/byObjectId/${objectId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (!res.ok) throw new Error('User nicht gefunden');
       const user = await res.json();
       setUserCache(prev => ({ ...prev, [objectId]: user }));

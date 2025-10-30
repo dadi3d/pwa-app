@@ -50,6 +50,10 @@ export async function initAuth() {
     if (window.location.pathname !== '/admin') {
       redirectToLogin();
     }
+  } else {
+    console.log('Token vorhanden, prüfe Gültigkeit...');
+    // Token validieren
+    await fetchUserData();
   }
 }
 
@@ -92,42 +96,55 @@ export async function fetchUserData() {
       
       // Prüfe ob der Benutzertyp zur aktuellen Seite passt
       const currentPath = window.location.pathname;
-      const isAdminPath = currentPath === '/admin' || currentPath.startsWith('/equipment') || 
-                         currentPath.startsWith('/hersteller') || currentPath.startsWith('/sets') || 
-                         currentPath.startsWith('/kategorien') || currentPath.startsWith('/nutzer') || 
-                         currentPath.startsWith('/einstellungen') || currentPath.startsWith('/kalender') ||
-                         currentPath.startsWith('/file-manager') || currentPath.startsWith('/produkt') ||
-                         currentPath.startsWith('/set-') || currentPath.startsWith('/auftraege-admin');
+      const isAdminPath = currentPath === '/admin' || 
+                         currentPath.startsWith('/equipment') || 
+                         currentPath.startsWith('/hersteller') || 
+                         currentPath.startsWith('/sets') || 
+                         currentPath.startsWith('/kategorien') || 
+                         currentPath.startsWith('/nutzer') || 
+                         currentPath.startsWith('/einstellungen') || 
+                         currentPath.startsWith('/kalender') ||
+                         currentPath.startsWith('/file-manager') || 
+                         currentPath.startsWith('/produkt') ||
+                         currentPath.startsWith('/set-') || 
+                         currentPath.startsWith('/auftraege-admin');
       const isOthUser = data.payload?.authMethod === 'oth';
       const isLocalUser = data.payload?.authMethod === 'local';
       
-      // OTH-User sollten nicht auf Admin-Seiten zugreifen können
+      console.log('Auth check:', { currentPath, isAdminPath, isOthUser, isLocalUser });
+      
+      // STRIKTE TRENNUNG: OTH-User dürfen NIEMALS auf Admin-Seiten
       if (isAdminPath && isOthUser) {
-        console.log('OTH-User versucht Admin-Seite zu erreichen - Weiterleitung zu /login');
+        console.log('🚫 OTH-User versucht Admin-Seite zu erreichen - ZWANGSLOGOUT');
         useAuth.getState().logout();
+        alert('Zugriff verweigert: OTH-User haben keinen Zugriff auf Admin-Bereiche');
         window.location.href = '/login';
         return null;
       }
       
-      // Lokale User sollten nur auf Admin-Seiten zugreifen können
+      // STRIKTE TRENNUNG: Lokale User dürfen NIEMALS auf User-Seiten  
       if (!isAdminPath && isLocalUser) {
-        console.log('Lokaler Admin-User außerhalb Admin-Bereich - Weiterleitung zu /equipment');
+        console.log('🚫 Lokaler Admin-User außerhalb Admin-Bereich - Weiterleitung zu /equipment');
         window.location.href = '/equipment';
-        return null;
+        return data.payload; // Token bleibt gültig
       }
       
       return data.payload;
     }
-    // Wenn die Antwort nicht ok ist (z.B. 401 Unauthorized), zur entsprechenden Login-Seite weiterleiten
+    // Token ungültig oder abgelaufen
     console.log('Token ungültig oder abgelaufen, Status:', res.status);
     useAuth.getState().logout();
     
     // Basiere Weiterleitung auf aktueller Seite
     const currentPath = window.location.pathname;
-    if (currentPath === '/admin' || currentPath.startsWith('/admin')) {
-      // Bleib auf Admin-Login
+    if (currentPath === '/admin' || currentPath.startsWith('/admin') || 
+        currentPath.startsWith('/equipment') || currentPath.startsWith('/sets') ||
+        currentPath.startsWith('/hersteller') || currentPath.startsWith('/kategorien')) {
+      // Admin-Bereich - zur Admin-Login
+      window.location.href = '/admin';
       return null;
     } else {
+      // User-Bereich - zur MyOTH-Login
       redirectToLogin();
       return null;
     }

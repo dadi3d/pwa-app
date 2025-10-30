@@ -102,17 +102,32 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+    
     async function getUserRole() {
       try {
         const user = await fetchUserData();
-        setUserRole(user?.role || null);
-      } catch {
-        setUserRole(null);
+        if (mounted) {
+          setUserRole(user?.role || null);
+        }
+      } catch (error) {
+        console.log('Fehler beim Laden der Benutzerdaten:', error);
+        if (mounted) {
+          setUserRole(null);
+        }
       } finally {
-        setIsLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     }
+    
     getUserRole();
+    
+    // Cleanup function
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Lade-Zustand anzeigen

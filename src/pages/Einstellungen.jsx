@@ -101,7 +101,12 @@ export default function Einstellungen() {
     async function fetchEvents() {
         setLoading(true);
         try {
-            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/google-calendar/events`);
+            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/google-calendar/events`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             const data = await response.json();
             
             if (response.ok) {
@@ -121,7 +126,11 @@ export default function Einstellungen() {
         setLoading(true);
         try {
             const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/google-calendar/sync-calendar`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
             });
             const data = await response.json();
             
@@ -155,7 +164,12 @@ export default function Einstellungen() {
 
     async function checkSystemStatus() {
         try {
-            const serverRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/status`);
+            const serverRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/status`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             if (serverRes.ok) {
                 setServerStatus({ status: 'online', label: 'Verbunden' });
                 const dbData = await serverRes.json();
@@ -178,7 +192,12 @@ export default function Einstellungen() {
 
     async function fetchDbStatus() {
         try {
-            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/status`);
+            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/status`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             const data = await res.json();
             if (res.ok) {
                 setDbStatus(data);
@@ -190,7 +209,12 @@ export default function Einstellungen() {
 
     async function fetchFilesStatus() {
         try {
-            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/files-status`);
+            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/files-status`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             const data = await res.json();
             if (res.ok) {
                 setFilesStatus(data);
@@ -202,7 +226,12 @@ export default function Einstellungen() {
 
     async function fetchServerInfo() {
         try {
-            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/server/info`);
+            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/server/info`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
             const data = await res.json();
             if (res.ok) {
                 setServerInfo(data);
@@ -231,6 +260,7 @@ export default function Einstellungen() {
             const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/download`, {
                 method: 'POST',
                 headers: {
+                    'Authorization': `Bearer ${token}`,
                     'x-backup-password': password
                 }
             });
@@ -275,6 +305,7 @@ export default function Einstellungen() {
             const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/upload`, {
                 method: 'POST',
                 headers: {
+                    'Authorization': `Bearer ${token}`,
                     'x-backup-password': password
                 },
                 body: formData
@@ -312,6 +343,7 @@ export default function Einstellungen() {
             const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/clear`, {
                 method: 'POST',
                 headers: {
+                    'Authorization': `Bearer ${token}`,
                     'x-backup-password': password
                 }
             });
@@ -343,6 +375,7 @@ export default function Einstellungen() {
             const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/download-files`, {
                 method: 'POST',
                 headers: {
+                    'Authorization': `Bearer ${token}`,
                     'x-backup-password': password
                 }
             });
@@ -387,6 +420,7 @@ export default function Einstellungen() {
             const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/upload-files`, {
                 method: 'POST',
                 headers: {
+                    'Authorization': `Bearer ${token}`,
                     'x-backup-password': password
                 },
                 body: formData

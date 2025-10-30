@@ -24,7 +24,7 @@ export default function Login() {
     }, []);
 
   useEffect(() => {
-    // Nur weiterleiten wenn Token vorhanden UND erfolgreich validiert wurde
+    // Admin-Login: Nur weiterleiten wenn Token vorhanden UND es ein lokaler Admin ist
     if (token) {
       // Token validieren durch API-Call
       fetch(`${MAIN_VARIABLES.SERVER_URL}/api/jwt-payload`, {
@@ -44,16 +44,18 @@ export default function Login() {
       .then(data => {
         // Prüfe ob es ein lokaler Admin-User ist
         if (data.payload?.authMethod === 'local') {
-          // Token ist gültig und User ist lokal - weiterleiten zur Admin-Startseite
+          console.log('✅ Lokaler Admin bereits eingeloggt - Weiterleitung zu /equipment');
           window.location.href = '/equipment';
         } else {
-          // OTH-User hat sich auf Admin-Seite verirrt - Token löschen und logout
-          console.log('OTH-User auf Admin-Login - Token gelöscht');
+          // OTH-User hat sich auf Admin-Seite verirrt - Token löschen und WARNUNG
+          console.log('🚫 OTH-User auf Admin-Login erkannt - Token gelöscht');
           setAuth(null);
+          setError('OTH-User können sich nicht als Admin anmelden. Bitte verwenden Sie die MyOTH-Login-Seite.');
         }
       })
       .catch(() => {
         // Fehler - logout und auf Admin-Login-Seite bleiben
+        console.log('Token ungültig - gelöscht');
         setAuth(null);
       });
     }
