@@ -23,7 +23,6 @@ export default function SetAnlegen() {
   const [setAssignment, setSetAssignment] = useState("");
   const [setRelation, setSetRelation] = useState(""); // NEU
   const [setNumber, setSetNumber] = useState("");
-  const [price, setPrice] = useState("");
   const [notePublic, setNotePublic] = useState("");
   const [notePrivate, setNotePrivate] = useState("");
   // Mehrfach-Upload für Bilder und Dokumente
@@ -122,7 +121,7 @@ export default function SetAnlegen() {
     setMessage("");
     setMessageColor("black");
 
-    if (!setState || !brand || !setName || !setAssignment || !category || !setRelation || !setNumber || !price) {
+    if (!setState || !brand || !setName || !setAssignment || !category || !setRelation || !setNumber) {
       setMessage("Bitte alle Pflichtfelder ausfüllen.");
       setMessageColor("red");
       return;
@@ -134,7 +133,7 @@ export default function SetAnlegen() {
     formData.append("set_assignment", setAssignment);
     formData.append("category", category);
     formData.append("set_number", setNumber);
-    formData.append("insurance_value", price);
+    formData.append("insurance_value", null);
     formData.append("note_public", notePublic);
     formData.append("note_private", notePrivate);
     formData.append("state", setState);
@@ -148,7 +147,7 @@ export default function SetAnlegen() {
     if (res.ok) {
       setMessage("Set erfolgreich angelegt.");
       setMessageColor("green");
-      setBrand(""); setSetName(""); setSetAssignment(""); setCategory(""); setSetNumber(""); setPrice("");
+      setBrand(""); setSetName(""); setSetAssignment(""); setCategory(""); setSetNumber("");
       setNotePublic(""); setNotePrivate(""); setSetState(""); setThumbnails([]); setManuals([]); setSetRelation("");
       if (thumbnailRef.current) thumbnailRef.current.value = "";
       if (manualRef.current) manualRef.current.value = "";
@@ -529,14 +528,6 @@ export default function SetAnlegen() {
                     </option>
                   ))}
                 </select>
-              </div>
-            </li>
-            {/* Preis */}
-            <li>
-              <label>Versicherungswert</label>
-              <div className="inline">
-                <input type="number" step="any" value={price} onChange={e => setPrice(e.target.value)} required style={{ flex: 1 }} />
-                <span className="hint">(Anschaffungspreis)</span>
               </div>
             </li>
             <li>
