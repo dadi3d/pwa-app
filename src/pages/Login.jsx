@@ -36,15 +36,15 @@ export default function Login() {
       })
       .then(res => {
         if (res.ok) {
-          // Token ist gültig - weiterleiten
-          window.location.href = '/home';
+          // Token ist gültig - weiterleiten zur Admin-Startseite
+          window.location.href = '/equipment';
         } else {
-          // Token ungültig - logout und auf Login-Seite bleiben
+          // Token ungültig - logout und auf Admin-Login-Seite bleiben
           setAuth(null);
         }
       })
       .catch(() => {
-        // Fehler - logout und auf Login-Seite bleiben
+        // Fehler - logout und auf Admin-Login-Seite bleiben
         setAuth(null);
       });
     }
@@ -71,7 +71,7 @@ export default function Login() {
       const data = await res.json();
       console.log('Token:', data.token);
       setAuth(data.token); // Token speichern
-      window.location.href = '/home';
+      window.location.href = '/equipment'; // Admin-Bereich
     } catch (err) {
       setError('Fehler beim Login: ' + err.message);
     }

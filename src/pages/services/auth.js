@@ -23,7 +23,13 @@ function redirectToLogin() {
     const loginPaths = ['/login', '/', '/admin', '/loginUser'];
     if (!loginPaths.includes(currentPath)) {
       console.log('Weiterleitung zu Login von:', currentPath);
-      window.location.href = '/login';
+      // Je nach aktueller Seite zur entsprechenden Login-Seite weiterleiten
+      // Für Admin-Bereich zur lokalen Login-Seite, sonst zu MyOTH
+      if (currentPath.startsWith('/admin') || currentPath.includes('admin')) {
+        window.location.href = '/admin';
+      } else {
+        window.location.href = '/login';
+      }
     } else {
       console.log('Bereits auf Login-Seite, keine Weiterleitung nötig');
     }
@@ -38,7 +44,10 @@ export async function initAuth() {
   const { token } = useAuth.getState();
   if (!token) {
     console.log('Kein Token vorhanden. Bitte anmelden.');
-    redirectToLogin();
+    // Keine automatische Weiterleitung von /admin Seite
+    if (window.location.pathname !== '/admin') {
+      redirectToLogin();
+    }
   }
 }
 
@@ -61,7 +70,10 @@ export async function fetchUserData() {
   const { token } = useAuth.getState();
   if (!token) {
     console.log('Kein Token vorhanden');
-    redirectToLogin();
+    // Keine automatische Weiterleitung von /admin Seite
+    if (window.location.pathname !== '/admin') {
+      redirectToLogin();
+    }
     return null;
   }
   try {
@@ -80,7 +92,10 @@ export async function fetchUserData() {
     // Wenn die Antwort nicht ok ist (z.B. 401 Unauthorized), zur Login-Seite weiterleiten
     console.log('Token ungültig oder abgelaufen, Status:', res.status);
     useAuth.getState().logout();
-    redirectToLogin();
+    // Keine automatische Weiterleitung von /admin Seite
+    if (window.location.pathname !== '/admin') {
+      redirectToLogin();
+    }
     return null;
   } catch (err) {
     console.error('Fehler beim Abrufen der Benutzerdaten:', err);
