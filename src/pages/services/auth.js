@@ -22,7 +22,10 @@ function redirectToLogin() {
     // Keine Weiterleitung, wenn bereits auf Login-Seiten
     const loginPaths = ['/login', '/', '/admin', '/loginUser'];
     if (!loginPaths.includes(currentPath)) {
+      console.log('Weiterleitung zu Login von:', currentPath);
       window.location.href = '/login';
+    } else {
+      console.log('Bereits auf Login-Seite, keine Weiterleitung nötig');
     }
   }
 }
@@ -57,6 +60,7 @@ export function checkToken() {
 export async function fetchUserData() {
   const { token } = useAuth.getState();
   if (!token) {
+    console.log('Kein Token vorhanden');
     redirectToLogin();
     return null;
   }
@@ -70,16 +74,18 @@ export async function fetchUserData() {
     });
     if (res.ok) {
       const data = await res.json();
+      console.log('Benutzerdaten erfolgreich abgerufen:', data.payload?.id);
       return data.payload;
     }
     // Wenn die Antwort nicht ok ist (z.B. 401 Unauthorized), zur Login-Seite weiterleiten
-    console.log('Token ungültig oder abgelaufen');
+    console.log('Token ungültig oder abgelaufen, Status:', res.status);
     useAuth.getState().logout();
     redirectToLogin();
     return null;
   } catch (err) {
     console.error('Fehler beim Abrufen der Benutzerdaten:', err);
-    redirectToLogin();
+    // Bei Netzwerkfehlern nicht automatisch zur Login-Seite weiterleiten
+    // redirectToLogin();
     return null;
   }
 }

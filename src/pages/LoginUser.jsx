@@ -1,15 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MAIN_VARIABLES } from '../config';
+import { useAuth } from './services/auth';
 
 const LoginUser = () => {
   const navigate = useNavigate();
+  const setAuth = useAuth(state => state.setAuth); // Zustand-Store verwenden
+  const token = useAuth(state => state.token); // Aktueller Token aus Store
   const [status, setStatus] = useState('Suche nach fe_user Cookie...');
   const [cookieValue, setCookieValue] = useState('');
   const [response, setResponse] = useState(null);
   const [manualCookieInput, setManualCookieInput] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
+
+  // Wenn bereits ein gültiger Token vorhanden ist, direkt weiterleiten
+  useEffect(() => {
+    if (token) {
+      console.log('Bereits eingeloggt, leite zu /home weiter');
+      navigate('/home');
+    }
+  }, [token, navigate]);
 
   // Erweiterte Funktion zum Abrufen des fe_user Cookies
   const getCookieValue = (cookieName) => {
@@ -201,9 +212,10 @@ const LoginUser = () => {
         
         // Bei erfolgreichem Login zu /home weiterleiten
         if (data.success && data.token) {
-          console.log('MyOTH Login erfolgreich, leite zu /home weiter');
-          // Optional: Token speichern (falls Auth-System vorhanden)
-          localStorage.setItem('token', data.token);
+          console.log('MyOTH Login erfolgreich, speichere Token und leite weiter');
+          // Token über Auth-Store speichern (nicht direkt localStorage)
+          setAuth(data.token);
+          setStatus('✅ Login erfolgreich! Weiterleitung...');
           setTimeout(() => {
             navigate('/home');
           }, 1500); // Kurze Verzögerung um Success-Message zu zeigen

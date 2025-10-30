@@ -24,10 +24,29 @@ export default function Login() {
     }, []);
 
   useEffect(() => {
+    // Nur weiterleiten wenn Token vorhanden UND erfolgreich validiert wurde
     if (token) {
-      // Optional: Token validieren, z.B. durch einen API-Call
-      setAuth(token);
-      window.location.href = '/home';
+      // Token validieren durch API-Call
+      fetch(`${MAIN_VARIABLES.SERVER_URL}/api/jwt-payload`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      .then(res => {
+        if (res.ok) {
+          // Token ist gültig - weiterleiten
+          window.location.href = '/home';
+        } else {
+          // Token ungültig - logout und auf Login-Seite bleiben
+          setAuth(null);
+        }
+      })
+      .catch(() => {
+        // Fehler - logout und auf Login-Seite bleiben
+        setAuth(null);
+      });
     }
   }, [setAuth, token]);
 

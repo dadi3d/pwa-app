@@ -99,6 +99,7 @@ function MobileMenu({ userRole }) {
 
 function App() {
   const [userRole, setUserRole] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function getUserRole() {
@@ -107,10 +108,27 @@ function App() {
         setUserRole(user?.role || null);
       } catch {
         setUserRole(null);
+      } finally {
+        setIsLoading(false);
       }
     }
     getUserRole();
   }, []);
+
+  // Lade-Zustand anzeigen
+  if (isLoading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        flexDirection: 'column'
+      }}>
+        <div>Lade...</div>
+      </div>
+    );
+  }
 
   return (
     <Router>
