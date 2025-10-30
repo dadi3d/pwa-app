@@ -83,30 +83,22 @@ const SetEdit = ({ setId: propSetId }) => {
         .then(setProducts);
     }, [setId]);
 
-  // Bild-URLs laden, wenn sich fileDatas ändern
+  // Bild-URLs generieren, wenn sich fileDatas ändern
   useEffect(() => {
-    async function loadImageUrls() {
-      const urls = {};
-      for (const fd of fileDatas) {
-        if (fd.filePath?.match(/\.(jpg|jpeg|png)$/i)) {
-          try {
-            const response = await fetch(
-              `${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(fd.filePath)}`
-            );
-            const data = await response.json();
-            if (data.path) {
-              urls[fd._id] = `${MAIN_VARIABLES.SERVER_URL}${data.path}`;
-            }
-          } catch (err) {
-            console.error('Fehler beim Laden der Bild-URL:', err);
-          }
+    const urls = {};
+    for (const fd of fileDatas) {
+      if (fd.filePath?.match(/\.(jpg|jpeg|png)$/i)) {
+        // Pfad direkt verwenden: filePath ist z.B. "files/images/xyz.jpg"
+        // Entferne "files/" Prefix falls vorhanden
+        let cleanPath = fd.filePath;
+        if (cleanPath.startsWith('files/')) {
+          cleanPath = cleanPath.substring(6);
         }
+        // URL konstruieren wie in Produkte.jsx
+        urls[fd._id] = `${MAIN_VARIABLES.SERVER_URL}/api/files/${cleanPath}`;
       }
-      setImageUrls(urls);
     }
-    if (fileDatas.length > 0) {
-      loadImageUrls();
-    }
+    setImageUrls(urls);
   }, [fileDatas]);
 
   // Hilfsfunktion: passende Files filtern
