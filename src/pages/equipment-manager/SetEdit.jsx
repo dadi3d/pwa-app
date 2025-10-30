@@ -202,8 +202,13 @@ async function handleSetThumbnail(fileId) {
     formData.append("note_private", setData.note_private || "");
     formData.append("state", setData.state);
     formData.append("insurance_value", setData.insurance_value || 0);
-    formData.append("set_assignment", setData.set_assignment);
-    formData.append("set_relation", setData.set_relation);
+    // Nur hinzufügen wenn gültige Werte vorhanden sind
+    if (setData.set_assignment && setData.set_assignment !== 'null') {
+      formData.append("set_assignment", setData.set_assignment);
+    }
+    if (setData.set_relation && setData.set_relation !== 'null') {
+      formData.append("set_relation", setData.set_relation);
+    }
 
     // Thumbnails anhängen
     if (thumbnailRef.current?.files?.length) {
