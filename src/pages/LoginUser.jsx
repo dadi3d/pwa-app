@@ -1,49 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MAIN_VARIABLES } from '../config';
-import { useAuth } from './services/auth';
 
 const LoginUser = () => {
   const navigate = useNavigate();
-  const setAuth = useAuth(state => state.setAuth); // Zustand-Store verwenden
-  const token = useAuth(state => state.token); // Aktueller Token aus Store
   const [status, setStatus] = useState('Suche nach fe_user Cookie...');
   const [cookieValue, setCookieValue] = useState('');
   const [response, setResponse] = useState(null);
   const [manualCookieInput, setManualCookieInput] = useState('');
   const [showManualInput, setShowManualInput] = useState(false);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
-
-  // Wenn bereits ein gültiger Token vorhanden ist, direkt weiterleiten
-  useEffect(() => {
-    if (token) {
-      // Token validieren und authMethod prüfen
-      fetch(`${MAIN_VARIABLES.SERVER_URL}/api/jwt-payload`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      .then(res => res.ok ? res.json() : Promise.reject('Token ungültig'))
-      .then(data => {
-        if (data.payload?.authMethod === 'oth') {
-          console.log('✅ OTH-User bereits eingeloggt, leite zu /home weiter');
-          navigate('/home');
-        } else {
-          // Lokaler Admin-User hat sich auf MyOTH-Seite verirrt - Token löschen und WARNUNG
-          console.log('🚫 Lokaler Admin-User auf MyOTH-Login erkannt - Token gelöscht');
-          setAuth(null);
-          setStatus('❌ Admin-User können sich nicht über MyOTH anmelden. Bitte verwenden Sie /admin');
-        }
-      })
-      .catch(() => {
-        // Token ungültig - löschen
-        console.log('Token ungültig - gelöscht');
-        setAuth(null);
-      });
-    }
-  }, [token, navigate, setAuth]);
 
   // Erweiterte Funktion zum Abrufen des fe_user Cookies
   const getCookieValue = (cookieName) => {
@@ -235,10 +201,9 @@ const LoginUser = () => {
         
         // Bei erfolgreichem Login zu /home weiterleiten
         if (data.success && data.token) {
-          console.log('MyOTH Login erfolgreich, speichere Token und leite weiter');
-          // Token über Auth-Store speichern (nicht direkt localStorage)
-          setAuth(data.token);
-          setStatus('✅ Login erfolgreich! Weiterleitung...');
+          console.log('MyOTH Login erfolgreich, leite zu /home weiter');
+          // Optional: Token speichern (falls Auth-System vorhanden)
+          localStorage.setItem('token', data.token);
           setTimeout(() => {
             navigate('/home');
           }, 1500); // Kurze Verzögerung um Success-Message zu zeigen

@@ -20,12 +20,7 @@ export default function Nutzer() {
     const token = useAuth(state => state.token);
 
     useEffect(() => {
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`, {
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            }
-        })
+        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`)
             .then(res => res.json())
             .then(data => {
                 setUsers(data);
@@ -52,10 +47,7 @@ export default function Nutzer() {
     const handleRoleChange = async (id, newRole) => {
         await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/${id}`, {
             method: 'PUT',
-            headers: { 
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json' 
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ role: newRole }),
         });
         setUsers(users => users.map(u => u.id === id ? { ...u, role: newRole } : u));

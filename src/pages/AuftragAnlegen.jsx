@@ -73,7 +73,6 @@ export default function AuftragAnlegen() {
       const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders/check-availability`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -105,12 +104,7 @@ export default function AuftragAnlegen() {
 
   const fetchSingleProducts = async (setId) => {
     try {
-      const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=${setId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=${setId}`);
       if (response.ok) {
         const data = await response.json();
         setSingleProducts(data);
@@ -236,13 +230,8 @@ export default function AuftragAnlegen() {
   };
 
   useEffect(() => {
-    // Sets laden - nur verfügbare Sets (ohne Status "nicht verfügbar") mit JWT-Authentication für OTH-User
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/user-sets/available`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    // Sets laden - nur verfügbare Sets (ohne Status "nicht verfügbar")
+    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/available`)
       .then((r) => r.json())
       .then(async (data) => {
         // Alle verfügbaren Sets für Set-Anzahl-Berechnung speichern
@@ -266,30 +255,15 @@ export default function AuftragAnlegen() {
         setThumbnailUrls(thumbnails);
       });
       
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderTypes`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderTypes`)
       .then((r) => r.json())
       .then(setOrderTypes);
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users?role=teacher`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users?role=teacher`)
       .then((r) => r.json())
       .then(setTeachers);
 
     // Einstellungen abrufen und speichern
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/settings`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    })
+    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/settings`)
       .then((r) => r.json())
       .then((settings) => {
         setSettings(settings);

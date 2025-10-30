@@ -24,40 +24,10 @@ export default function Login() {
     }, []);
 
   useEffect(() => {
-    // Admin-Login: Nur weiterleiten wenn Token vorhanden UND es ein lokaler Admin ist
     if (token) {
-      // Token validieren durch API-Call
-      fetch(`${MAIN_VARIABLES.SERVER_URL}/api/jwt-payload`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      .then(res => {
-        if (res.ok) {
-          return res.json();
-        } else {
-          throw new Error('Token ungültig');
-        }
-      })
-      .then(data => {
-        // Prüfe ob es ein lokaler Admin-User ist
-        if (data.payload?.authMethod === 'local') {
-          console.log('✅ Lokaler Admin bereits eingeloggt - Weiterleitung zu /equipment');
-          window.location.href = '/equipment';
-        } else {
-          // OTH-User hat sich auf Admin-Seite verirrt - Token löschen und WARNUNG
-          console.log('🚫 OTH-User auf Admin-Login erkannt - Token gelöscht');
-          setAuth(null);
-          setError('OTH-User können sich nicht als Admin anmelden. Bitte verwenden Sie die MyOTH-Login-Seite.');
-        }
-      })
-      .catch(() => {
-        // Fehler - logout und auf Admin-Login-Seite bleiben
-        console.log('Token ungültig - gelöscht');
-        setAuth(null);
-      });
+      // Optional: Token validieren, z.B. durch einen API-Call
+      setAuth(token);
+      window.location.href = '/home';
     }
   }, [setAuth, token]);
 
@@ -82,7 +52,7 @@ export default function Login() {
       const data = await res.json();
       console.log('Token:', data.token);
       setAuth(data.token); // Token speichern
-      window.location.href = '/equipment'; // Admin-Bereich
+      window.location.href = '/home';
     } catch (err) {
       setError('Fehler beim Login: ' + err.message);
     }
