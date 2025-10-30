@@ -29,6 +29,7 @@ const SetEdit = ({ setId: propSetId }) => {
   const [assignments, setAssignments] = useState([]);
   const [setNames, setSetNames] = useState([]);
   const [fileDatas, setFileDatas] = useState([]);
+  const [imageUrls, setImageUrls] = useState({}); // Speichert URLs für Bilder: { fileId: url }
 
   // Refs für File-Inputs
   const thumbnailRef = useRef();
@@ -81,6 +82,32 @@ const SetEdit = ({ setId: propSetId }) => {
         .then(res => res.json())
         .then(setProducts);
     }, [setId]);
+
+  // Bild-URLs laden, wenn sich fileDatas ändern
+  useEffect(() => {
+    async function loadImageUrls() {
+      const urls = {};
+      for (const fd of fileDatas) {
+        if (fd.filePath?.match(/\.(jpg|jpeg|png)$/i)) {
+          try {
+            const response = await fetch(
+              `${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(fd.filePath)}`
+            );
+            const data = await response.json();
+            if (data.path) {
+              urls[fd._id] = `${MAIN_VARIABLES.SERVER_URL}${data.path}`;
+            }
+          } catch (err) {
+            console.error('Fehler beim Laden der Bild-URL:', err);
+          }
+        }
+      }
+      setImageUrls(urls);
+    }
+    if (fileDatas.length > 0) {
+      loadImageUrls();
+    }
+  }, [fileDatas]);
 
   // Hilfsfunktion: passende Files filtern
   function getMatchingFiles(type) {
@@ -316,7 +343,7 @@ async function handleSetThumbnail(fileId) {
                         {getMatchingFiles("thumbnail").map(fd => (
                           <div key={fd._id} style={{ position: "relative" }}>
                             <img
-                              src={`${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(fd.filePath)}`}
+                              src={imageUrls[fd._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/images/placeholder_set.jpg`}
                               alt={fd.filePath.split("/").pop()}
                               style={{
                                 maxWidth: 80,
@@ -513,7 +540,7 @@ async function handleSetThumbnail(fileId) {
                   getMatchingFiles("thumbnail").map(fd => (
                     <div key={fd._id} style={{ position: "relative" }}>
                       <img
-                        src={`${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(fd.filePath)}`}
+                        src={imageUrls[fd._id] || `${MAIN_VARIABLES.SERVER_URL}/api/files/images/placeholder_set.jpg`}
                         alt={fd.filePath.split("/").pop()}
                         style={{
                             maxWidth: 80,

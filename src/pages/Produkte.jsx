@@ -53,11 +53,11 @@ export default function Produkte() {
         try {
           const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
           const thumbnailData = await thumbnailRes.json();
-          // Backend gibt bereits fertigen imgproxy-Pfad zurück: /api/images/files/images/...
+          // Backend gibt /api/files/images/... zurück, verwende direkt
           thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}?width=500&height=500&resize=fill&format=webp&quality=85`;
         } catch (err) {
           console.error(`Fehler beim Laden des Thumbnails für Set ${set._id}:`, err);
-          thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}/api/images/files/images/placeholder_set.jpg?width=500&height=500&format=webp`;
+          thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}/api/files/images/placeholder_set.jpg?width=500&height=500&format=webp`;
         }
       }
       setThumbnailUrls(thumbnails);

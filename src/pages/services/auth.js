@@ -14,6 +14,20 @@ export const useAuth = create(persist(
 ));
 
 /**
+ * Leitet auf die Login-Seite weiter
+ */
+function redirectToLogin() {
+  if (typeof window !== 'undefined') {
+    const currentPath = window.location.pathname;
+    // Keine Weiterleitung, wenn bereits auf Login-Seiten
+    const loginPaths = ['/login', '/', '/admin', '/loginUser'];
+    if (!loginPaths.includes(currentPath)) {
+      window.location.href = '/login';
+    }
+  }
+}
+
+/**
  * Initialisiert die Authentifizierung, prüft ob ein Token vorhanden ist.
  * @returns {Promise<void>}
  */
@@ -21,7 +35,7 @@ export async function initAuth() {
   const { token } = useAuth.getState();
   if (!token) {
     console.log('Kein Token vorhanden. Bitte anmelden.');
-    // Hier könntest du ggf. auf die Login-Seite weiterleiten
+    redirectToLogin();
   }
 }
 
@@ -42,7 +56,10 @@ export function checkToken() {
 
 export async function fetchUserData() {
   const { token } = useAuth.getState();
-  if (!token) return null;
+  if (!token) {
+    redirectToLogin();
+    return null;
+  }
   try {
     const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/jwt-payload`, {
       method: 'POST',
@@ -55,8 +72,14 @@ export async function fetchUserData() {
       const data = await res.json();
       return data.payload;
     }
+    // Wenn die Antwort nicht ok ist (z.B. 401 Unauthorized), zur Login-Seite weiterleiten
+    console.log('Token ungültig oder abgelaufen');
+    useAuth.getState().logout();
+    redirectToLogin();
     return null;
   } catch (err) {
+    console.error('Fehler beim Abrufen der Benutzerdaten:', err);
+    redirectToLogin();
     return null;
   }
 }
