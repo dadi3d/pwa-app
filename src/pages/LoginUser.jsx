@@ -124,7 +124,15 @@ const LoginUser = () => {
         
         // Bei erfolgreichem Login zu /home weiterleiten
         if (data.success && data.token) {
+          // Token sowohl in localStorage als auch im Auth-State speichern
           localStorage.setItem('token', data.token);
+          
+          // WICHTIG: Token auch im Auth-State speichern
+          const { setAuth } = await import('./services/auth');
+          setAuth(data.token);
+          
+          console.log('Token gespeichert:', data.token.substring(0, 50) + '...');
+          
           setTimeout(() => {
             navigate('/home');
           }, 1500);

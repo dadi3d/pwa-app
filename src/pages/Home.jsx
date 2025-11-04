@@ -9,9 +9,20 @@ export default function Home() {
   const [userRole, setUserRole] = useState('student');
   const token = useAuth(state => state.token);
 
+  // Prüfe Token beim Mount
   useEffect(() => {
-    loadHomePageText();
-    fetchUserId();
+    console.log('Home.jsx - Token Status:', token ? 'vorhanden' : 'nicht vorhanden');
+    if (token) {
+      loadHomePageText();
+      fetchUserId();
+    } else {
+      // Prüfe ob Token im localStorage vorhanden ist
+      const storedToken = localStorage.getItem('token');
+      if (storedToken) {
+        console.log('Token im localStorage gefunden, setze Auth-State');
+        useAuth.getState().setAuth(storedToken);
+      }
+    }
   }, [token]);
 
   // Benutzer-ID aus JWT holen
