@@ -164,29 +164,8 @@ const LoginUser = () => {
 
           <div className="text-center py-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p className="text-gray-600">Prüfe Cookies und versuche automatischen Login...</p>
+            <p className="text-gray-600">Authentifizierung läuft...</p>
           </div>
-
-          {response && (
-            <div className="mb-4">
-              <h3 className="font-medium mb-2">Server-Antwort:</h3>
-              <pre className="text-xs bg-green-50 p-3 rounded overflow-auto">
-                {JSON.stringify(response, null, 2)}
-              </pre>
-            </div>
-          )}
-        </div>
-
-        <div className="bg-blue-50 p-4 rounded">
-          <h3 className="font-medium mb-2">🤖 Automatischer Login-Prozess:</h3>
-          <p className="text-sm">Die App versucht automatisch den fe_user Cookie zu finden und einen Login durchzuführen:</p>
-          <ul className="text-xs mt-2 space-y-1">
-            <li>• Sofortige Prüfung beim Laden</li>
-            <li>• Zweite Prüfung nach 2 Sekunden</li>
-            <li>• Dritte Prüfung nach weiteren 3 Sekunden</li>
-            <li>• Bei Erfolg: Weiterleitung zu /home</li>
-            <li>• Bei Fehler: Weiterleitung zur OTH-Login-Seite</li>
-          </ul>
         </div>
       </div>
     </div>
