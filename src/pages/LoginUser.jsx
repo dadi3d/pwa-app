@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MAIN_VARIABLES } from '../config';
+import { useAuth } from './services/auth';
 
 const LoginUser = () => {
   const navigate = useNavigate();
   const [status, setStatus] = useState('Suche nach fe_user Cookie...');
   const [response, setResponse] = useState(null);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
+  const { setAuth } = useAuth();
 
   // Funktion zum Abrufen des fe_user Cookies
   const getCookieValue = (cookieName) => {
@@ -128,7 +130,6 @@ const LoginUser = () => {
           localStorage.setItem('token', data.token);
           
           // WICHTIG: Token auch im Auth-State speichern
-          const { setAuth } = await import('./services/auth');
           setAuth(data.token);
           
           console.log('Token gespeichert:', data.token.substring(0, 50) + '...');
