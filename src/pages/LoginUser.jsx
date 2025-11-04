@@ -171,6 +171,12 @@ const LoginUser = () => {
       } else {
         setStatus('❌ fe_user Cookie nicht gefunden (client + server versucht).');
         setShowManualInput(true);
+        
+        // Nach 5 Sekunden zur OTH-Login-Seite weiterleiten wenn kein Cookie gefunden
+        setTimeout(() => {
+          console.log('Kein fe_user Cookie gefunden, leite zur OTH-Login-Seite weiter...');
+          window.location.href = 'https://www.oth-aw.de/login/?redirect_url=https://medienausleihe.oth-aw.de&title=Medienausleihe';
+        }, 5000);
       }
     };
 
@@ -213,12 +219,24 @@ const LoginUser = () => {
         setResponse(data);
         // Bei Fehler auch manuelle Eingabe anzeigen
         setShowManualInput(true);
+        
+        // Nach 3 Sekunden zur OTH-Login-Seite weiterleiten
+        setTimeout(() => {
+          console.log('Login fehlgeschlagen, leite zur OTH-Login-Seite weiter...');
+          window.location.href = 'https://www.oth-aw.de/login/?redirect_url=https://medienausleihe.oth-aw.de&title=Medienausleihe';
+        }, 3000);
       }
     } catch (error) {
       setStatus(`❌ Netzwerk-Fehler: ${error.message}`);
       console.error('Login-Fehler:', error);
       // Bei Fehler auch manuelle Eingabe anzeigen
       setShowManualInput(true);
+      
+      // Nach 3 Sekunden zur OTH-Login-Seite weiterleiten
+      setTimeout(() => {
+        console.log('Netzwerk-Fehler aufgetreten, leite zur OTH-Login-Seite weiter...');
+        window.location.href = 'https://www.oth-aw.de/login/?redirect_url=https://medienausleihe.oth-aw.de&title=Medienausleihe';
+      }, 3000);
     }
   };
 
@@ -293,6 +311,12 @@ const LoginUser = () => {
                     className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700"
                   >
                     🐛 Debug Cookies
+                  </button>
+                  <button
+                    onClick={() => window.location.href = 'https://www.oth-aw.de/login/?redirect_url=https://medienausleihe.oth-aw.de&title=Medienausleihe'}
+                    className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                  >
+                    🔗 OTH Login
                   </button>
                 </div>
               </div>
