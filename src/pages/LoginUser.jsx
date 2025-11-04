@@ -9,6 +9,7 @@ const LoginUser = () => {
 
   // Funktion zum Abrufen des fe_user Cookies
   const getCookieValue = (cookieName) => {
+    // Methode 1: Standard Cookie-Parsing
     const cookies = document.cookie.split(';');
     for (let i = 0; i < cookies.length; i++) {
       let cookie = cookies[i].trim();
@@ -16,6 +17,14 @@ const LoginUser = () => {
         return decodeURIComponent(cookie.substring(cookieName.length + 1));
       }
     }
+    
+    // Methode 2: RegEx-basierte Suche (für Edge Cases)
+    const regex = new RegExp('(^|;)\\s*' + cookieName + '\\s*=\\s*([^;]+)');
+    const match = document.cookie.match(regex);
+    if (match) {
+      return decodeURIComponent(match[2]);
+    }
+    
     return null;
   };
 
@@ -25,7 +34,7 @@ const LoginUser = () => {
       try {
         setStatus('Sitzung wird überprüft...');
         
-        // Cookie suchen mit mehreren Versuchen
+        // Cookie suchen mit mehreren Versuchen (wie in der vorherigen Version)
         let feUserCookie = getCookieValue('fe_user');
         
         if (!feUserCookie) {
@@ -36,6 +45,12 @@ const LoginUser = () => {
         
         if (!feUserCookie) {
           // Noch ein Versuch nach weiterer Wartezeit
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          feUserCookie = getCookieValue('fe_user');
+        }
+        
+        if (!feUserCookie) {
+          // Letzter Versuch nach weiterer Wartezeit
           await new Promise(resolve => setTimeout(resolve, 2000));
           feUserCookie = getCookieValue('fe_user');
         }
