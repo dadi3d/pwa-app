@@ -4,7 +4,7 @@ import { MAIN_VARIABLES } from '../config';
 
 const LoginUser = () => {
   const navigate = useNavigate();
-  const [status, setStatus] = useState('Suche nach fe_user Cookie...');
+  const [status, setStatus] = useState('Anmeldung wird geprüft...');
   const [response, setResponse] = useState(null);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
 
@@ -57,25 +57,21 @@ const LoginUser = () => {
   // Automatischer Cookie-Check beim Laden der Komponente
   useEffect(() => {
     const checkForCookie = async () => {
-      setStatus('🔍 Suche nach fe_user Cookie...');
+      setStatus('Anmeldung wird geprüft...');
       
       // Client-seitige Cookie-Prüfung
       let feUserCookie = getCookieValue('fe_user');
       
       if (!feUserCookie) {
-        setStatus('⏳ Client-seitig nicht gefunden, versuche server-seitige Abfrage...');
-        
         // Server-seitige Cookie-Abfrage
         feUserCookie = await getServerCookie();
         
         if (!feUserCookie) {
-          setStatus('⏳ Warte 2 Sekunden und versuche erneut...');
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           feUserCookie = getCookieValue('fe_user') || await getServerCookie();
           
           if (!feUserCookie) {
-            setStatus('⏳ Letzter Versuch nach weiteren 3 Sekunden...');
             await new Promise(resolve => setTimeout(resolve, 3000));
             
             feUserCookie = getCookieValue('fe_user') || await getServerCookie();
@@ -84,11 +80,11 @@ const LoginUser = () => {
       }
       
       if (feUserCookie && feUserCookie.length > 0) {
-        setStatus('✅ fe_user Cookie gefunden! Versuche automatischen Login...');
+        setStatus('Anmeldung erfolgreich...');
         setAutoLoginAttempted(true);
         await sendLoginRequest(feUserCookie);
       } else {
-        setStatus('❌ fe_user Cookie nicht gefunden. Weiterleitung zur OTH-Login-Seite...');
+        setStatus('Weiterleitung zur OTH-Anmeldung...');
         
         // Nach 2 Sekunden zur OTH-Login-Seite weiterleiten
         setTimeout(() => {
@@ -104,7 +100,7 @@ const LoginUser = () => {
 
   const sendLoginRequest = async (feUserValue) => {
     try {
-      setStatus('Sende Anfrage an Server...');
+      setStatus('Anmeldung läuft...');
       
       const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/myoth-login`, {
         method: 'POST',
@@ -119,7 +115,7 @@ const LoginUser = () => {
       const data = await response.json();
       
       if (response.ok) {
-        setStatus('✅ Login erfolgreich! Weiterleitung...');
+        setStatus('Anmeldung erfolgreich!');
         setResponse(data);
         
         // Bei erfolgreichem Login zu /home weiterleiten
@@ -130,7 +126,7 @@ const LoginUser = () => {
           }, 1500);
         }
       } else {
-        setStatus(`❌ Fehler: ${data.error || 'Unbekannter Fehler'}`);
+        setStatus('Weiterleitung zur OTH-Anmeldung...');
         setResponse(data);
         
         // Nach 3 Sekunden zur OTH-Login-Seite weiterleiten
@@ -139,7 +135,7 @@ const LoginUser = () => {
         }, 3000);
       }
     } catch (error) {
-      setStatus(`❌ Netzwerk-Fehler: ${error.message}`);
+      setStatus('Weiterleitung zur OTH-Anmeldung...');
       
       // Nach 3 Sekunden zur OTH-Login-Seite weiterleiten
       setTimeout(() => {
