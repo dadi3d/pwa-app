@@ -57,7 +57,10 @@ const LoginUser = () => {
   // Automatischer Cookie-Check beim Laden der Komponente
   useEffect(() => {
     const checkForCookie = async () => {
+      if (autoLoginAttempted) return; // Verhindert mehrfache Ausführung
+      
       setStatus('Anmeldung wird geprüft...');
+      setAutoLoginAttempted(true); // Sofort setzen um weitere Versuche zu verhindern
       
       // Client-seitige Cookie-Prüfung
       let feUserCookie = getCookieValue('fe_user');
@@ -81,7 +84,6 @@ const LoginUser = () => {
       
       if (feUserCookie && feUserCookie.length > 0) {
         setStatus('Anmeldung erfolgreich...');
-        setAutoLoginAttempted(true);
         await sendLoginRequest(feUserCookie);
       } else {
         setStatus('Weiterleitung zur OTH-Anmeldung...');
@@ -93,10 +95,8 @@ const LoginUser = () => {
       }
     };
 
-    if (!autoLoginAttempted) {
-      checkForCookie();
-    }
-  }, [autoLoginAttempted]);
+    checkForCookie();
+  }, []); // Leeres Dependency Array - läuft nur beim ersten Mount
 
   const sendLoginRequest = async (feUserValue) => {
     try {
