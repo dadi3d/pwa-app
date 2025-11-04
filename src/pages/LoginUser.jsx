@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { MAIN_VARIABLES } from '../config';
 
 const LoginUser = () => {
-  const [status, setStatus] = useState('Anmeldung wird geprüft...');
+  const navigate = useNavigate();
+  const [status, setStatus] = useState('Suche nach fe_user Cookie...');
   const [response, setResponse] = useState(null);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
 
@@ -54,32 +56,26 @@ const LoginUser = () => {
 
   // Automatischer Cookie-Check beim Laden der Komponente
   useEffect(() => {
-    // Safari-Fix: Prüfe ob wir gerade von einem erfolgreichen Login kommen
-    if (sessionStorage.getItem('authSuccess') === 'true') {
-      sessionStorage.removeItem('authSuccess');
-      window.location.replace('/home');
-      return;
-    }
-    
     const checkForCookie = async () => {
-      if (autoLoginAttempted) return; // Verhindert mehrfache Ausführung
-      
-      setStatus('Anmeldung wird geprüft...');
-      setAutoLoginAttempted(true); // Sofort setzen um weitere Versuche zu verhindern
+      setStatus('🔍 Suche nach fe_user Cookie...');
       
       // Client-seitige Cookie-Prüfung
       let feUserCookie = getCookieValue('fe_user');
       
       if (!feUserCookie) {
+        setStatus('⏳ Client-seitig nicht gefunden, versuche server-seitige Abfrage...');
+        
         // Server-seitige Cookie-Abfrage
         feUserCookie = await getServerCookie();
         
         if (!feUserCookie) {
+          setStatus('⏳ Warte 2 Sekunden und versuche erneut...');
           await new Promise(resolve => setTimeout(resolve, 2000));
           
           feUserCookie = getCookieValue('fe_user') || await getServerCookie();
           
           if (!feUserCookie) {
+            setStatus('⏳ Letzter Versuch nach weiteren 3 Sekunden...');
             await new Promise(resolve => setTimeout(resolve, 3000));
             
             feUserCookie = getCookieValue('fe_user') || await getServerCookie();
@@ -88,10 +84,11 @@ const LoginUser = () => {
       }
       
       if (feUserCookie && feUserCookie.length > 0) {
-        setStatus('Anmeldung erfolgreich...');
+        setStatus('✅ fe_user Cookie gefunden! Versuche automatischen Login...');
+        setAutoLoginAttempted(true);
         await sendLoginRequest(feUserCookie);
       } else {
-        setStatus('Weiterleitung zur OTH-Anmeldung...');
+        setStatus('❌ fe_user Cookie nicht gefunden. Weiterleitung zur OTH-Login-Seite...');
         
         // Nach 2 Sekunden zur OTH-Login-Seite weiterleiten
         setTimeout(() => {
@@ -100,12 +97,14 @@ const LoginUser = () => {
       }
     };
 
-    checkForCookie();
-  }, []); // Leeres Dependency Array - läuft nur beim ersten Mount
+    if (!autoLoginAttempted) {
+      checkForCookie();
+    }
+  }, [autoLoginAttempted]);
 
   const sendLoginRequest = async (feUserValue) => {
     try {
-      setStatus('Anmeldung läuft...');
+      setStatus('Sende Anfrage an Server...');
       
       const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/myoth-login`, {
         method: 'POST',
@@ -120,25 +119,18 @@ const LoginUser = () => {
       const data = await response.json();
       
       if (response.ok) {
-        setStatus('Anmeldung erfolgreich!');
+        setStatus('✅ Login erfolgreich! Weiterleitung...');
         setResponse(data);
         
         // Bei erfolgreichem Login zu /home weiterleiten
         if (data.success && data.token) {
           localStorage.setItem('token', data.token);
-          
-          // Zusätzliche Safari-Kompatibilität
-          sessionStorage.setItem('authSuccess', 'true');
-          sessionStorage.setItem('userRole', data.userFromDB?.role || 'student');
-          sessionStorage.setItem('userId', data.userFromDB?.id || '');
-          
-          // Kurze Verzögerung für Safari
           setTimeout(() => {
-            window.location.replace('/home');
-          }, 1000);
+            navigate('/home');
+          }, 1500);
         }
       } else {
-        setStatus('Weiterleitung zur OTH-Anmeldung...');
+        setStatus(`❌ Fehler: ${data.error || 'Unbekannter Fehler'}`);
         setResponse(data);
         
         // Nach 3 Sekunden zur OTH-Login-Seite weiterleiten
@@ -147,7 +139,7 @@ const LoginUser = () => {
         }, 3000);
       }
     } catch (error) {
-      setStatus('Weiterleitung zur OTH-Anmeldung...');
+      setStatus(`❌ Netzwerk-Fehler: ${error.message}`);
       
       // Nach 3 Sekunden zur OTH-Login-Seite weiterleiten
       setTimeout(() => {
@@ -172,8 +164,29 @@ const LoginUser = () => {
 
           <div className="text-center py-4">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p className="text-gray-600">Authentifizierung läuft...</p>
+            <p className="text-gray-600">Prüfe Cookies und versuche automatischen Login...</p>
           </div>
+
+          {response && (
+            <div className="mb-4">
+              <h3 className="font-medium mb-2">Server-Antwort:</h3>
+              <pre className="text-xs bg-green-50 p-3 rounded overflow-auto">
+                {JSON.stringify(response, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded">
+          <h3 className="font-medium mb-2">🤖 Automatischer Login-Prozess:</h3>
+          <p className="text-sm">Die App versucht automatisch den fe_user Cookie zu finden und einen Login durchzuführen:</p>
+          <ul className="text-xs mt-2 space-y-1">
+            <li>• Sofortige Prüfung beim Laden</li>
+            <li>• Zweite Prüfung nach 2 Sekunden</li>
+            <li>• Dritte Prüfung nach weiteren 3 Sekunden</li>
+            <li>• Bei Erfolg: Weiterleitung zu /home</li>
+            <li>• Bei Fehler: Weiterleitung zur OTH-Login-Seite</li>
+          </ul>
         </div>
       </div>
     </div>
