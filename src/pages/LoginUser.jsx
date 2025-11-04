@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { MAIN_VARIABLES } from '../config';
 
 const LoginUser = () => {
-  const navigate = useNavigate();
   const [status, setStatus] = useState('Anmeldung wird geprüft...');
   const [response, setResponse] = useState(null);
   const [autoLoginAttempted, setAutoLoginAttempted] = useState(false);
@@ -122,7 +120,7 @@ const LoginUser = () => {
         if (data.success && data.token) {
           localStorage.setItem('token', data.token);
           setTimeout(() => {
-            navigate('/home');
+            window.location.href = '/home';
           }, 1500);
         }
       } else {
