@@ -54,6 +54,13 @@ const LoginUser = () => {
 
   // Automatischer Cookie-Check beim Laden der Komponente
   useEffect(() => {
+    // Safari-Fix: Prüfe ob wir gerade von einem erfolgreichen Login kommen
+    if (sessionStorage.getItem('authSuccess') === 'true') {
+      sessionStorage.removeItem('authSuccess');
+      window.location.replace('/home');
+      return;
+    }
+    
     const checkForCookie = async () => {
       if (autoLoginAttempted) return; // Verhindert mehrfache Ausführung
       
@@ -119,9 +126,16 @@ const LoginUser = () => {
         // Bei erfolgreichem Login zu /home weiterleiten
         if (data.success && data.token) {
           localStorage.setItem('token', data.token);
+          
+          // Zusätzliche Safari-Kompatibilität
+          sessionStorage.setItem('authSuccess', 'true');
+          sessionStorage.setItem('userRole', data.userFromDB?.role || 'student');
+          sessionStorage.setItem('userId', data.userFromDB?.id || '');
+          
+          // Kurze Verzögerung für Safari
           setTimeout(() => {
-            window.location.href = '/home';
-          }, 1500);
+            window.location.replace('/home');
+          }, 1000);
         }
       } else {
         setStatus('Weiterleitung zur OTH-Anmeldung...');
