@@ -3,7 +3,7 @@ import { MAIN_VARIABLES } from "../config";
 import { SettingsService } from "./services/Settings.js";
 import { Button } from "../styles/catalyst/button";
 import packageJson from '../../package.json';
-import { useAuth, fetchUserData } from './services/auth';
+import { useAuth, fetchUserData, authenticatedFetch } from './services/auth';
 
 const weekdays = [
   "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"
@@ -101,7 +101,7 @@ export default function Einstellungen() {
     async function fetchEvents() {
         setLoading(true);
         try {
-            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/google-calendar/events`);
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/google-calendar/events`);
             const data = await response.json();
             
             if (response.ok) {
@@ -120,7 +120,7 @@ export default function Einstellungen() {
     async function syncCalendar() {
         setLoading(true);
         try {
-            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/google-calendar/sync-calendar`, {
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/google-calendar/sync-calendar`, {
                 method: 'POST'
             });
             const data = await response.json();
@@ -155,7 +155,7 @@ export default function Einstellungen() {
 
     async function checkSystemStatus() {
         try {
-            const serverRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/status`);
+            const serverRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/status`);
             if (serverRes.ok) {
                 setServerStatus({ status: 'online', label: 'Verbunden' });
                 const dbData = await serverRes.json();
@@ -178,7 +178,7 @@ export default function Einstellungen() {
 
     async function fetchDbStatus() {
         try {
-            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/status`);
+            const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/status`);
             const data = await res.json();
             if (res.ok) {
                 setDbStatus(data);
@@ -190,7 +190,7 @@ export default function Einstellungen() {
 
     async function fetchFilesStatus() {
         try {
-            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/files-status`);
+            const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/files-status`);
             const data = await res.json();
             if (res.ok) {
                 setFilesStatus(data);
@@ -202,7 +202,7 @@ export default function Einstellungen() {
 
     async function fetchServerInfo() {
         try {
-            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/server/info`);
+            const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/server/info`);
             const data = await res.json();
             if (res.ok) {
                 setServerInfo(data);
@@ -228,7 +228,7 @@ export default function Einstellungen() {
         setBackupMessage("🔄 Erstelle Backup...");
         
         try {
-            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/download`, {
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/download`, {
                 method: 'POST',
                 headers: {
                     'x-backup-password': password
@@ -272,7 +272,7 @@ export default function Einstellungen() {
             const formData = new FormData();
             formData.append('backupFile', restoreFile);
             
-            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/upload`, {
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/upload`, {
                 method: 'POST',
                 headers: {
                     'x-backup-password': password
@@ -309,7 +309,7 @@ export default function Einstellungen() {
         setBackupMessage("🗑️ Lösche Datenbank...");
         
         try {
-            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/clear`, {
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/clear`, {
                 method: 'POST',
                 headers: {
                     'x-backup-password': password
@@ -340,7 +340,7 @@ export default function Einstellungen() {
         setFilesBackupMessage("🔄 Erstelle Files-Backup...");
         
         try {
-            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/download-files`, {
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/download-files`, {
                 method: 'POST',
                 headers: {
                     'x-backup-password': password
@@ -384,7 +384,7 @@ export default function Einstellungen() {
             const formData = new FormData();
             formData.append('filesBackupFile', filesRestoreFile);
             
-            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/upload-files`, {
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/backup/upload-files`, {
                 method: 'POST',
                 headers: {
                     'x-backup-password': password

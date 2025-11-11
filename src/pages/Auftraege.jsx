@@ -93,7 +93,12 @@ export default function Auftraege() {
         const setId = set._id || set.id;
         if (setId && !thumbnailUrls[setId]) {
           try {
-            const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${setId}`);
+            const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${setId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
             const thumbnailData = await thumbnailRes.json();
             setThumbnailUrls(prev => ({
               ...prev,

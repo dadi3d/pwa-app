@@ -1,4 +1,5 @@
 import { MAIN_VARIABLES } from '../../config.js';
+import { authenticatedFetch } from './auth.js';
 
 /**
  * Settings Service für API-Aufrufe
@@ -11,7 +12,7 @@ export class SettingsService {
    */
   static async fetchSettings() {
     try {
-      const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/settings`);
+      const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/settings`);
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -29,11 +30,8 @@ export class SettingsService {
    */
   static async saveSettings(settings) {
     try {
-      const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/settings`, {
+      const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/settings`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(settings),
       });
       
@@ -80,11 +78,14 @@ export class SettingsService {
    */
   static async getHomePageText() {
     try {
-      const settings = await this.fetchSettings();
-      return settings.homePageText || '<p>Willkommen zur Medienausleihe! Hier können Sie Equipment für Ihre Projekte ausleihen.</p>';
+      const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/settings/home-text`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return await response.text();
     } catch (error) {
       console.error('Fehler beim Laden des Startseiten-Textes:', error);
-      return '<p>Willkommen zur Medienausleihe! Hier können Sie Equipment für Ihre Projekte ausleihen.</p>';
+      throw error;
     }
   }
 

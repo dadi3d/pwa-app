@@ -14,6 +14,29 @@ export const useAuth = create(persist(
 ));
 
 /**
+ * Authenticated fetch wrapper - fügt automatisch Bearer Token hinzu
+ */
+export const authenticatedFetch = (url, options = {}) => {
+  const token = useAuth.getState().token;
+  
+  if (!token) {
+    redirectToLogin();
+    return Promise.reject(new Error('Kein Token verfügbar'));
+  }
+
+  const authHeaders = {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json',
+    ...options.headers
+  };
+
+  return fetch(url, {
+    ...options,
+    headers: authHeaders
+  });
+};
+
+/**
  * Leitet auf die Login-Seite weiter
  */
 function redirectToLogin() {

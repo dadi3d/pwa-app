@@ -73,6 +73,7 @@ export default function AuftragAnlegen() {
       const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders/check-availability`, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -104,7 +105,12 @@ export default function AuftragAnlegen() {
 
   const fetchSingleProducts = async (setId) => {
     try {
-      const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=${setId}`);
+      const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=${setId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
       if (response.ok) {
         const data = await response.json();
         setSingleProducts(data);
@@ -231,20 +237,33 @@ export default function AuftragAnlegen() {
 
   useEffect(() => {
     // Sets laden - nur verfügbare Sets (ohne Status "nicht verfügbar")
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/available`)
-      .then((r) => r.json())
-      .then(async (data) => {
+    const loadData = async () => {
+      try {
+        // Sets laden
+        const setsRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/available`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const setsData = await setsRes.json();
+        
         // Alle verfügbaren Sets für Set-Anzahl-Berechnung speichern
-        setAllSets(data);
+        setAllSets(setsData);
         // Nur Sets mit Nummer 1 für die Anzeige filtern
-        const filteredSets = data.filter(set => set.set_number === 1);
+        const filteredSets = setsData.filter(set => set.set_number === 1);
         setSets(filteredSets);
         
         // Thumbnail-URLs für alle Sets laden
         const thumbnails = {};
         for (const set of filteredSets) {
           try {
-            const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
+            const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            });
             const thumbnailData = await thumbnailRes.json();
             thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`;
           } catch (err) {
@@ -253,22 +272,43 @@ export default function AuftragAnlegen() {
           }
         }
         setThumbnailUrls(thumbnails);
-      });
-      
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderTypes`)
-      .then((r) => r.json())
-      .then(setOrderTypes);
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users?role=teacher`)
-      .then((r) => r.json())
-      .then(setTeachers);
 
-    // Einstellungen abrufen und speichern
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/settings`)
-      .then((r) => r.json())
-      .then((settings) => {
-        setSettings(settings);
-        console.log("Settings:", settings);
-      });
+        // Order Types laden
+        const orderTypesRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderTypes`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const orderTypesData = await orderTypesRes.json();
+        setOrderTypes(orderTypesData);
+
+        // Teachers laden
+        const teachersRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users?role=teacher`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const teachersData = await teachersRes.json();
+        setTeachers(teachersData);
+
+        // Einstellungen abrufen und speichern
+        const settingsRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/settings`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const settingsData = await settingsRes.json();
+        setSettings(settingsData);
+        console.log("Settings:", settingsData);
+      } catch (error) {
+        console.error('Fehler beim Laden der Daten:', error);
+      }
+    };
+    
+    loadData();
   }, []);
 
   // Verfügbarkeitsprüfung bei Datumsänderung

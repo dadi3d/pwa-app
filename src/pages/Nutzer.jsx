@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MAIN_VARIABLES } from '../config';
-import { useAuth, fetchUserData } from './services/auth';
+import { useAuth, fetchUserData, authenticatedFetch } from './services/auth';
 import { Heading, Subheading } from '../styles/catalyst/heading';
 import { Input } from '../styles/catalyst/input';
 import { Select } from '../styles/catalyst/select';
@@ -20,12 +20,19 @@ export default function Nutzer() {
     const token = useAuth(state => state.token);
 
     useEffect(() => {
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`)
-            .then(res => res.json())
-            .then(data => {
+        const loadUsers = async () => {
+            try {
+                const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`);
+                const data = await res.json();
                 setUsers(data);
                 setLoading(false);
-            });
+            } catch (error) {
+                console.error('Fehler beim Laden der Nutzer:', error);
+                setLoading(false);
+            }
+        };
+        
+        loadUsers();
         fetchUserId();
     }, [token]);
 
@@ -45,12 +52,15 @@ export default function Nutzer() {
     }
 
     const handleRoleChange = async (id, newRole) => {
-        await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ role: newRole }),
-        });
-        setUsers(users => users.map(u => u.id === id ? { ...u, role: newRole } : u));
+        try {
+            await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ role: newRole }),
+            });
+            setUsers(users => users.map(u => u.id === id ? { ...u, role: newRole } : u));
+        } catch (error) {
+            console.error('Fehler beim Ändern der Rolle:', error);
+        }
         setUpdatedUserId(id);
         setTimeout(() => setUpdatedUserId(null), 2000);
     };

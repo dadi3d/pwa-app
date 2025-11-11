@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { useAuth, fetchUserData } from './services/auth';
+import { useAuth, fetchUserData, authenticatedFetch } from './services/auth';
 import { MAIN_VARIABLES } from '../config';
 import AuftragEditAdmin from './order-manager/AuftragEditAdmin';
 
@@ -159,7 +159,7 @@ export default function Kalender() {
       return userCache[objectId].id;
     }
     try {
-      const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/byObjectId/${objectId}`);
+      const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/byObjectId/${objectId}`);
       if (!res.ok) throw new Error('User nicht gefunden');
       const user = await res.json();
       setUserCache(prev => ({ ...prev, [objectId]: user }));
@@ -175,15 +175,7 @@ export default function Kalender() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(
-          `${MAIN_VARIABLES.SERVER_URL}/api/orders`,
-          {
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
-          }
-        );
+        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders`);
         
         if (!res.ok) {
           throw new Error(`Fehler beim Laden der Aufträge: ${res.status} ${res.statusText}`);

@@ -7,7 +7,7 @@ import { Dropdown, DropdownButton, DropdownMenu, DropdownItem } from "../styles/
 import { ChevronDownIcon } from "@heroicons/react/16/solid";
 import { Calendar } from 'vanilla-calendar-pro';
 import 'vanilla-calendar-pro/styles/index.css';
-import { useAuth, fetchUserData } from './services/auth';
+import { useAuth, fetchUserData, authenticatedFetch } from './services/auth';
 
 // API Endpunkte wie im Backend
 const API_SETS = `${MAIN_VARIABLES.SERVER_URL}/api/sets`;
@@ -39,7 +39,7 @@ export default function Produkte() {
   useEffect(() => {
     async function loadSets() {
       // Verwende die neue Route für verfügbare Sets (ohne Status "nicht verfügbar")
-      const res = await fetch(API_SETS_AVAILABLE);
+      const res = await authenticatedFetch(API_SETS_AVAILABLE);
       const data = await res.json();
       // Alle Sets für Set-Anzahl-Berechnung speichern
       setAllSets(data);
@@ -51,7 +51,12 @@ export default function Produkte() {
       const thumbnails = {};
       for (const set of filteredSets) {
         try {
-          const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
+          const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
           const thumbnailData = await thumbnailRes.json();
           // Backend gibt /api/files/images/... zurück, verwende direkt
           thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}?width=500&height=500&resize=fill&format=webp&quality=85`;
@@ -93,6 +98,7 @@ export default function Produkte() {
       const response = await fetch(API_CHECK_AVAILABILITY, {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -234,7 +240,12 @@ export default function Produkte() {
     // Produkte für das Set laden falls noch nicht vorhanden
     if (!productsBySet[set._id]) {
       try {
-        const res = await fetch(API_SINGLE_PRODUCTS + set._id);
+        const res = await fetch(API_SINGLE_PRODUCTS + set._id, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
         if (!res.ok) throw new Error("Fehler beim Laden der Produkte");
         const products = await res.json();
         setProductsBySet((prev) => ({ ...prev, [set._id]: products }));

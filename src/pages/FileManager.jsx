@@ -3,7 +3,7 @@ import { FileManager } from "@cubone/react-file-manager";
 import "@cubone/react-file-manager/dist/style.css";
 import './FileManager.css';
 import { MAIN_VARIABLES } from "../config";
-import { useAuth, fetchUserData } from './services/auth';
+import { useAuth, fetchUserData, authenticatedFetch } from './services/auth';
 
 // Bild-Vorschau-Komponente
 const CustomImagePreviewer = ({ file }) => {
@@ -31,7 +31,7 @@ function App() {
   useEffect(() => {
     async function fetchDataStructure() {
       try {
-        const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/get-data-structure`);
+        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/get-data-structure`);
         const data = await res.json();
         setFiles(data);
       } catch (err) {
@@ -60,7 +60,7 @@ function App() {
   const handleRefresh = async () => {
   console.log("Aktualisiere Datenstruktur...");
   try {
-    const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/get-data-structure`);
+    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/get-data-structure`);
     const data = await res.json();
     setFiles(data);
   } catch (err) {
@@ -70,9 +70,8 @@ function App() {
 
   const handleRename = async (file, newName) => {
     try {
-      const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/rename-data`, {
+      const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/rename-data`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ oldPath: file.path, newName }),
       });
       if (!res.ok) throw new Error("Fehler beim Umbenennen");
@@ -104,9 +103,8 @@ function App() {
   const handleDelete = async (filesToDelete) => {
     const paths = filesToDelete.map(file => file.path);
     try {
-      const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/delete-data`, {
+      const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/delete-data`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ paths }),
       });
       if (!res.ok) throw new Error("Fehler beim Löschen");
@@ -120,9 +118,8 @@ function App() {
   // Wird vom FileManager aufgerufen, wenn ein neuer Ordner erstellt wird
   const handleCreateFolder = async (name, parentFolder) => {
     try {
-      const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/create-folder`, {
+      const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/create-folder`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name,
           parentPath: parentFolder?.path || ""
