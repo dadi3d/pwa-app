@@ -24,11 +24,20 @@ export const authenticatedFetch = (url, options = {}) => {
     return Promise.reject(new Error('Kein Token verfügbar'));
   }
 
+  // Prüfe ob FormData gesendet wird
+  const isFormData = options.body instanceof FormData;
+  
   const authHeaders = {
     'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
+    // Setze Content-Type nur wenn es kein FormData ist
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...options.headers
   };
+
+  // Entferne Content-Type falls es auf undefined gesetzt wurde
+  if (authHeaders['Content-Type'] === undefined) {
+    delete authHeaders['Content-Type'];
+  }
 
   return fetch(url, {
     ...options,

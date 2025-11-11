@@ -145,11 +145,7 @@ export default function SetAnlegen() {
 
     const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`, { 
       method: "POST", 
-      body: formData,
-      headers: {
-        // Entferne Content-Type für FormData, behalte aber Authorization
-        'Content-Type': undefined
-      }
+      body: formData
     });
     if (res.ok) {
       setMessage("Set erfolgreich angelegt.");
