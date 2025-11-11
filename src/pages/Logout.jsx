@@ -67,6 +67,8 @@ export default function Logout() {
             
             setIsLoggingOut(false);
             setLogoutComplete(true);
+            // URL Parameter für erfolgreiches Logout setzen
+            window.history.replaceState({}, '', '/logout?complete=true');
             
         } catch (error) {
             console.error('Fehler beim Logout:', error);
@@ -74,55 +76,42 @@ export default function Logout() {
             logout();
             setIsLoggingOut(false);
             setLogoutComplete(true);
+            // URL Parameter für erfolgreiches Logout setzen
+            window.history.replaceState({}, '', '/logout?complete=true');
         }
     };
 
     if (isLoggingOut) {
         return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4">
-                <div className="max-w-lg w-full space-y-6">
-                    <div className="text-center">
-                        <h2 className="text-3xl font-bold text-gray-900">Abmelden...</h2>
-                        <p className="text-gray-600 mt-2">Sie werden abgemeldet</p>
+            <div className="min-h-screen bg-gray-50">
+                <header className="bg-white shadow">
+                    <h1 className="text-2xl font-bold text-gray-900 text-center py-6">Abmelden...</h1>
+                </header>
+                <main className="container mx-auto px-4 py-8">
+                    <div className="text-center py-8">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
                     </div>
-                    
-                    <div className="bg-white p-6 rounded-lg shadow">
-                        <div className="text-center py-4">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-                            <p className="text-gray-600">Melde ab...</p>
-                        </div>
-                    </div>
-                </div>
+                </main>
             </div>
         );
     }
 
     if (logoutComplete) {
         return (
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center py-12 px-4">
-                <div className="max-w-lg w-full space-y-6">
+            <div className="min-h-screen bg-gray-50">
+                <header className="bg-white shadow">
+                    <h1 className="text-2xl font-bold text-gray-900 text-center py-6">Erfolgreich abgemeldet</h1>
+                </header>
+                <main className="container mx-auto px-4 py-8">
                     <div className="text-center">
-                        <h2 className="text-3xl font-bold text-green-600">✅ Erfolgreich ausgeloggt</h2>
-                        <p className="text-gray-600 mt-2">Sie wurden erfolgreich abgemeldet</p>
+                        <button
+                            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                            onClick={() => (window.location.href = "/login")}
+                        >
+                            Anmelden
+                        </button>
                     </div>
-                    
-                    <div className="bg-white p-6 rounded-lg shadow">
-                        <div className="text-center">
-                            <div className="text-green-600 mb-4">
-                                <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                            </div>
-                            <p className="text-gray-600 mb-4">Sie wurden erfolgreich abgemeldet.</p>
-                            <a 
-                                href="/" 
-                                className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                            >
-                                Zur Startseite
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                </main>
             </div>
         );
     }

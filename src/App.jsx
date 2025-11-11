@@ -72,6 +72,11 @@ function MobileMenu({ userRole }) {
     return null;
   }
 
+  // Kein Menü anzeigen, wenn Logout erfolgreich abgeschlossen wurde
+  if (location.pathname === '/logout' && location.search.includes('complete=true')) {
+    return null;
+  }
+
   // Fallback: student-Menü, falls Rolle unbekannt
   const menu = menuConfig[userRole] || menuConfig['student'];
 
