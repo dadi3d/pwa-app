@@ -66,7 +66,7 @@ export default function Sets() {
     const loadAllSetValues = async (sets) => {
         const valuePromises = sets.map(async (set) => {
             try {
-                const res = await fetch(API_SINGLE_PRODUCTS + set._id);
+                const res = await authenticatedFetch(API_SINGLE_PRODUCTS + set._id);
                 if (!res.ok) throw new Error("Fehler beim Laden der Produkte");
                 const products = await res.json();
                 const setValue = calculateSetValue(products);
@@ -86,7 +86,7 @@ export default function Sets() {
 
     useEffect(() => {
         async function loadSets() {
-            const res = await fetch(API_SETS);
+            const res = await authenticatedFetch(API_SETS);
             const sets = await res.json();
             setAllSets(sets);
 
@@ -97,7 +97,7 @@ export default function Sets() {
             const thumbnails = {};
             for (const set of sets) {
                 try {
-                    const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
+                    const thumbnailRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
                     const thumbnailData = await thumbnailRes.json();
                     thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`;
                 } catch (err) {
@@ -152,7 +152,7 @@ export default function Sets() {
         setExpandedSetId(expandedSetId === setId ? null : setId);
         if (!productsBySet[setId]) {
             try {
-                const res = await fetch(API_SINGLE_PRODUCTS + setId);
+                const res = await authenticatedFetch(API_SINGLE_PRODUCTS + setId);
                 if (!res.ok) throw new Error("Fehler beim Laden der Produkte");
                 const products = await res.json();
                 setProductsBySet((prev) => ({ ...prev, [setId]: products }));
