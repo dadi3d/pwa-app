@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MAIN_VARIABLES } from '../../config';
+import { authenticatedFetch } from '../services/auth';
 
 export default function SetBezeichnungen() {
     const [sets, setSets] = useState([]);
@@ -13,7 +14,7 @@ export default function SetBezeichnungen() {
 
     async function loadSetNames() {
         setLoading(true);
-        const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`);
+        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`);
         const data = await res.json();
         // Sortiere nach deutschem Namen
         data.sort((a, b) => a.name.de.localeCompare(b.name.de, 'de', { sensitivity: 'base' }));
@@ -26,9 +27,8 @@ export default function SetBezeichnungen() {
         const name = newName.trim();
         if (!name) return;
 
-        const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`, {
+        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: { de: name } })
         });
 
@@ -53,9 +53,8 @@ export default function SetBezeichnungen() {
             return;
         }
 
-        const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names/${id}`, {
+        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names/${id}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name: { de: trimmed } })
         });
 
@@ -71,7 +70,7 @@ export default function SetBezeichnungen() {
     }
 
     async function deleteSetName(id, val) {
-        const check = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names/${id}/check-usage`);
+        const check = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names/${id}/check-usage`);
         const result = await check.json();
 
         if (result.used) {
@@ -85,7 +84,7 @@ export default function SetBezeichnungen() {
 
         if (!window.confirm('Wirklich löschen?')) return;
 
-        await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names/${id}`, { method: 'DELETE' });
+        await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names/${id}`, { method: 'DELETE' });
         loadSetNames();
     }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { MAIN_VARIABLES } from "../../config";
+import { authenticatedFetch } from "../services/auth";
 
 const API_URL = `${MAIN_VARIABLES.SERVER_URL}/api/brands`;
 
@@ -13,7 +14,7 @@ const HerstellerManager = () => {
     // Alle Hersteller laden
     const loadBrands = async () => {
     try {
-        const response = await fetch(API_URL);
+        const response = await authenticatedFetch(API_URL);
         if (!response.ok) throw new Error("Fehler beim Laden der Hersteller");
         const data = await response.json();
         // Alphabetisch nach name sortieren
@@ -29,9 +30,8 @@ const HerstellerManager = () => {
     const addBrand = async () => {
         if (!newBrand.trim()) return;
         try {
-            const response = await fetch(API_URL, {
+            const response = await authenticatedFetch(API_URL, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: newBrand.trim() }),
             });
             if (response.status === 409) {
@@ -51,9 +51,8 @@ const HerstellerManager = () => {
     const updateBrand = async (id) => {
         if (!editName.trim()) return;
         try {
-            const response = await fetch(`${API_URL}/${id}`, {
+            const response = await authenticatedFetch(`${API_URL}/${id}`, {
                 method: "PUT",
-                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: editName.trim() }),
             });
             if (response.status === 409) {
@@ -74,7 +73,7 @@ const HerstellerManager = () => {
     const deleteBrand = async (id) => {
         if (!window.confirm("Soll der Hersteller wirklich gelöscht werden?")) return;
         try {
-            const response = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+            const response = await authenticatedFetch(`${API_URL}/${id}`, { method: "DELETE" });
             if (response.status === 409) {
                 setError("Hersteller wird noch verwendet und kann nicht gelöscht werden.");
                 return;

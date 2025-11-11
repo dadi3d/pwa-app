@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MAIN_VARIABLES } from "../../config";
-import { useAuth, fetchUserData } from "../services/auth";
+import { useAuth, fetchUserData, authenticatedFetch } from "../services/auth";
 
 export default function AuftragAnlegen() {
   const [sets, setSets] = useState([]);
@@ -29,19 +29,19 @@ export default function AuftragAnlegen() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`)
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`)
       .then((r) => r.json())
       .then(setSets);
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderTypes`)
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderTypes`)
       .then((r) => r.json())
       .then(setOrderTypes);
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderStates`)
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderStates`)
       .then((r) => r.json())
       .then(setOrderStates);
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`)
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`)
       .then((r) => r.json())
       .then(setUsers);
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users?role=teacher`)
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users?role=teacher`)
       .then((r) => r.json())
       .then(setTeachers);
   }, []);
@@ -88,12 +88,8 @@ export default function AuftragAnlegen() {
       user: form.user,
     };
 
-    const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders`, {
+    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders`, {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify(payload),
     });
     if (res.ok) {

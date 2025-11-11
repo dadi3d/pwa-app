@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { MAIN_VARIABLES } from '../../config';
+import { authenticatedFetch } from '../services/auth';
 
 export default function SetKategorien() {
     const [categories, setCategories] = useState([]);
@@ -13,7 +14,7 @@ export default function SetKategorien() {
     async function loadCategories() {
         setLoading(true);
         try {
-            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories`);
+            const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories`);
             const cats = await res.json();
 
             cats.sort((a, b) => {
@@ -38,9 +39,8 @@ export default function SetKategorien() {
             return;
         }
         try {
-            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories`, {
+            const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: { de: name } })
             });
             if (res.status === 409) {
@@ -67,9 +67,8 @@ export default function SetKategorien() {
             return;
         }
         try {
-            const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories/${id}`, {
+            const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories/${id}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: { de: trimmed } })
             });
             if (res.status === 409) {
@@ -88,7 +87,7 @@ export default function SetKategorien() {
 
     async function deleteCategory(id) {
         try {
-            const check = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories/${id}/check-usage`);
+            const check = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories/${id}/check-usage`);
             const result = await check.json();
             if (result.used) {
                 let msg = 'Diese Kategorie wird in folgenden Produkten verwendet:\n\n';
@@ -99,7 +98,7 @@ export default function SetKategorien() {
                 return;
             }
             if (!window.confirm('Wirklich löschen?')) return;
-            await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories/${id}`, { method: 'DELETE' });
+            await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories/${id}`, { method: 'DELETE' });
             loadCategories();
         } catch (err) {
             console.error('Fehler beim Löschen der Kategorie:', err);

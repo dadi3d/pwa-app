@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MAIN_VARIABLES } from '../../config';
-import { useAuth, fetchUserData } from '../services/auth';
+import { useAuth, fetchUserData, authenticatedFetch } from '../services/auth';
 
 export default function ProduktAnlegen() {
     const messageRef = useRef();
@@ -31,7 +31,7 @@ export default function ProduktAnlegen() {
         
 
         // Set-Relations laden
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-relations`)
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-relations`)
             .then(res => res.json())
             .then(data => {
             // Die Räume sind direkt im Objekt, nicht in name.rooms
@@ -59,7 +59,7 @@ export default function ProduktAnlegen() {
 
     async function loadDropdown(endpoint, selectId, isInterval = false, isState = false, isActiveStatus = false) {
         try {
-            const res = await fetch(endpoint);
+            const res = await authenticatedFetch(endpoint);
             let items = await res.json();
 
             // Alphabetisch sortieren für Set, Hersteller, Kategorie
@@ -138,7 +138,7 @@ export default function ProduktAnlegen() {
             try {
                 const fetchedRooms = await Promise.all(
                     rooms.map(id =>
-                        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/rooms/${id}`)
+                        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/rooms/${id}`)
                             .then(res => res.ok ? res.json() : null)
                             .catch(() => null)
                     )
@@ -242,9 +242,8 @@ export default function ProduktAnlegen() {
 
         console.log('Sende Payload:', payload);
 
-        const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products`, {
+        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
@@ -341,9 +340,8 @@ export default function ProduktAnlegen() {
                                 const name = prompt('Neuen Hersteller anlegen:');
                                 if (!name || !name.trim()) return;
                                 try {
-                                    const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`, {
+                                    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`, {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ name: name.trim() })
                                     });
                                     if (res.status === 409) {
@@ -380,9 +378,8 @@ export default function ProduktAnlegen() {
                                 const name = prompt('Neue Kategorie anlegen:');
                                 if (!name || !name.trim()) return;
                                 try {
-                                    const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`, {
+                                    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`, {
                                         method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
                                         body: JSON.stringify({ name: name.trim() })
                                     });
                                     if (res.status === 409) {

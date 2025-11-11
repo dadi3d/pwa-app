@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { MAIN_VARIABLES } from "../../config";
-import { useAuth, fetchUserData } from '../services/auth';
+import { useAuth, fetchUserData, authenticatedFetch } from '../services/auth';
 
 export default function SetAnlegen() {
   // Dropdown-States
@@ -62,7 +62,7 @@ export default function SetAnlegen() {
 
   // Files laden
   useEffect(() => {
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data`)
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data`)
       .then(r => r.json())
       .then(setFileDatas);
     fetchUserId();
@@ -95,12 +95,12 @@ export default function SetAnlegen() {
 
   // Dropdowns laden
   useEffect(() => {
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-relations`).then(r => r.json()).then(data => setSetRelations(data.sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })))) // NEU
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`).then(r => r.json()).then(data => setBrands(data.sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" }))));
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`).then(r => r.json()).then(data => setSetNames(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories`).then(r => r.json()).then(data => setCategories(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-states`).then(r => r.json()).then(data => setSetStates(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`).then(r => r.json()).then(data => setSetAssignments(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-relations`).then(r => r.json()).then(data => setSetRelations(data.sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })))) // NEU
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`).then(r => r.json()).then(data => setBrands(data.sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" }))));
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`).then(r => r.json()).then(data => setSetNames(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories`).then(r => r.json()).then(data => setCategories(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-states`).then(r => r.json()).then(data => setSetStates(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`).then(r => r.json()).then(data => setSetAssignments(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
   }, []);
 
   // Set-Nummer automatisch aktualisieren
@@ -109,7 +109,7 @@ export default function SetAnlegen() {
       setSetNumber("");
       return;
     }
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/next-set-number?brand=${brand}&setName=${setName}&setRelation=${setRelation}`) // <--- geändert
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/next-set-number?brand=${brand}&setName=${setName}&setRelation=${setRelation}`) // <--- geändert
       .then(r => r.json())
       .then(data => setSetNumber(data.nextSetNumber || ""))
       .catch(() => setSetNumber(""));
@@ -143,7 +143,11 @@ export default function SetAnlegen() {
     thumbnails.forEach(file => formData.append("thumbnails", file));
     manuals.forEach(file => formData.append("manuals", file));
 
-    const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`, { method: "POST", body: formData });
+    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`, { 
+      method: "POST", 
+      body: formData,
+      headers: {} // Override Content-Type for FormData
+    });
     if (res.ok) {
       setMessage("Set erfolgreich angelegt.");
       setMessageColor("green");
@@ -168,9 +172,8 @@ export default function SetAnlegen() {
       setBrandModalMessage("Hersteller existiert bereits.");
       return;
     }
-    const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`, {
+    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: newBrandName.trim() }),
     });
     if (!res.ok) {
@@ -195,9 +198,8 @@ export default function SetAnlegen() {
       setSetNameModalMessage("Set-Bezeichnung existiert bereits.");
       return;
     }
-    const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`, {
+    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: { de: newSetName.trim() } }),
     });
     if (!res.ok) {
@@ -222,9 +224,8 @@ export default function SetAnlegen() {
       setCategoryModalMessage("Kategorie existiert bereits.");
       return;
     }
-    const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories`, {
+    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: { de: newCategoryName.trim() } }),
     });
     if (!res.ok) {
@@ -249,9 +250,8 @@ export default function SetAnlegen() {
       setSetAssignmentModalMessage("Zuordnung existiert bereits.");
       return;
     }
-    const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`, {
+    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: { de: newSetAssignmentName.trim() } }),
     });
     if (!res.ok) {

@@ -3,7 +3,7 @@ import { MAIN_VARIABLES } from '../../config';
 import ProductEdit from './ProductEdit';
 import { Button } from '../../styles/catalyst/button';
 import { Dialog, DialogTitle, DialogBody, DialogActions } from '../../styles/catalyst/dialog';
-import { useAuth, fetchUserData } from '../services/auth';
+import { useAuth, fetchUserData, authenticatedFetch } from '../services/auth';
 
 export default function SetProdukte() {
     const [selectedProductId, setSelectedProductId] = useState(null);
@@ -47,7 +47,7 @@ export default function SetProdukte() {
 
     async function loadFilters() {
         // Kategorien laden
-        const categoryRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`);
+        const categoryRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`);
         const categories = await categoryRes.json();
         // Kategorien alphabetisch sortieren
         categories.sort((a, b) => {
@@ -58,7 +58,7 @@ export default function SetProdukte() {
         setCategories(categories);
 
         // Sets laden
-        const setRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`);
+        const setRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`);
         const sets = await setRes.json();
         // Sets alphabetisch sortieren (nach Hersteller, dann Set-Name)
         sets.sort((a, b) => {
@@ -75,7 +75,7 @@ export default function SetProdukte() {
     }
 
     async function loadProducts() {
-        const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products`);
+        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products`);
         const products = await res.json();
         setAllProducts(products);
     }
@@ -83,18 +83,18 @@ export default function SetProdukte() {
     async function openSetModal(setId) {
         try {
             // Set-Details laden
-            const setRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`);
+            const setRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`);
             const setData = await setRes.json();
             setSelectedSet(setData);
             
             // Produkte des Sets laden
-            const productsRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=${setId}`);
+            const productsRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=${setId}`);
             const productsData = await productsRes.json();
             setSetProducts(productsData);
             
             // Thumbnail-URL laden
             try {
-                const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${setId}`);
+                const thumbnailRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${setId}`);
                 const thumbnailData = await thumbnailRes.json();
                 setThumbnailUrl(`${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`);
             } catch (err) {

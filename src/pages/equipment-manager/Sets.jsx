@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { MAIN_VARIABLES } from "../../config";
 import SetEdit from "./SetEdit"; // Import für Lightbox
-import { useAuth, fetchUserData } from '../services/auth';
+import { useAuth, fetchUserData, authenticatedFetch } from '../services/auth';
 
 const API_SETS = `${MAIN_VARIABLES.SERVER_URL}/api/sets`;
 const API_BRANDS = `${MAIN_VARIABLES.SERVER_URL}/api/brands`;
@@ -27,9 +27,9 @@ export default function Sets() {
 
     useEffect(() => {
         async function loadFilters() {
-            const brandRes = await fetch(API_BRANDS);
+            const brandRes = await authenticatedFetch(API_BRANDS);
             setBrands(await brandRes.json());
-            const categoryRes = await fetch(API_CATEGORIES);
+            const categoryRes = await authenticatedFetch(API_CATEGORIES);
             setCategories(await categoryRes.json());
         }
         loadFilters();

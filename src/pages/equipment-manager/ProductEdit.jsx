@@ -4,6 +4,7 @@ import { MAIN_VARIABLES } from '../../config.js';
 import { Button } from '../../styles/catalyst/button';
 import { Input } from '../../styles/catalyst/input';
 import { Textarea } from '../../styles/catalyst/textarea';
+import { authenticatedFetch } from '../services/auth';
 
 const API_BRANDS = `${MAIN_VARIABLES.SERVER_URL}/api/brands`;
 const API_CATEGORIES = `${MAIN_VARIABLES.SERVER_URL}/api/product-categories`;
@@ -38,11 +39,11 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
     // Alle Referenzdaten laden
     async function loadRefs() {
       const [b, c, s, sets, intervals] = await Promise.all([
-        fetch(API_BRANDS).then(res => res.json()),
-        fetch(API_CATEGORIES).then(res => res.json()),
-        fetch(API_STATES).then(res => res.json()),
-        fetch(API_SETS).then(res => res.json()),
-        fetch(API_TEST_INTERVALS).then(res => res.json()),
+        authenticatedFetch(API_BRANDS).then(res => res.json()),
+        authenticatedFetch(API_CATEGORIES).then(res => res.json()),
+        authenticatedFetch(API_STATES).then(res => res.json()),
+        authenticatedFetch(API_SETS).then(res => res.json()),
+        authenticatedFetch(API_TEST_INTERVALS).then(res => res.json()),
       ]);
       setBrands(b);
       setCategories(c);
@@ -56,7 +57,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
   useEffect(() => {
     if (!productId) return;
     // Produkt-Daten laden
-    fetch(`${API_SINGLE_PRODUCTS}/${productId}`)
+    authenticatedFetch(`${API_SINGLE_PRODUCTS}/${productId}`)
       .then(res => res.json())
       .then(async data => {
         setProductData(data);
@@ -64,7 +65,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
         if (data.CustomerID || data.Various_1) {
           setShowInventory(true);
           // CustomerIDs laden wenn vorhanden
-          fetch(API_CUSTOMERIDS)
+          authenticatedFetch(API_CUSTOMERIDS)
             .then(res => res.json())
             .then(customerIds => setCustomerIds(customerIds))
             .catch(err => console.error('Fehler beim Laden der CustomerIDs:', err));
@@ -88,7 +89,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
     try {
       console.log('Loading rooms for set:', setId);
       // Set mit Relations laden
-      const setRes = await fetch(`${API_SETS}/${setId}`);
+      const setRes = await authenticatedFetch(`${API_SETS}/${setId}`);
       const setData = await setRes.json();
       console.log('Set data:', setData);
       
@@ -104,7 +105,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
       if (roomIds.length > 0) {
         const fetchedRooms = await Promise.all(
           roomIds.map(id =>
-            fetch(`${API_ROOMS}/${id}`)
+            authenticatedFetch(`${API_ROOMS}/${id}`)
               .then(res => res.ok ? res.json() : null)
               .catch(() => null)
           )
@@ -117,7 +118,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
       } else {
         console.log('No rooms found for set, loading all available rooms');
         // Fallback: alle verfügbaren Räume laden
-        const allRoomsRes = await fetch(API_ROOMS);
+        const allRoomsRes = await authenticatedFetch(API_ROOMS);
         const allRooms = await allRoomsRes.json();
         console.log('All available rooms:', allRooms);
         setRooms(allRooms);
@@ -126,7 +127,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
       console.error('Fehler beim Laden der Räume:', err);
       // Fallback: alle Räume laden
       try {
-        const allRoomsRes = await fetch(API_ROOMS);
+        const allRoomsRes = await authenticatedFetch(API_ROOMS);
         const allRooms = await allRoomsRes.json();
         setRooms(allRooms);
       } catch (fallbackErr) {
@@ -147,7 +148,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
   async function handleDelete(id) {
     if (!window.confirm("Produkt wirklich löschen?")) return;
     try {
-      await fetch(`${API_SINGLE_PRODUCTS}/${id}`, {
+      await authenticatedFetch(`${API_SINGLE_PRODUCTS}/${id}`, {
         method: "DELETE",
       });
       window.location.href = '/equipment/products';
@@ -170,7 +171,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
       const showInv = value === 'ja';
       setShowInventory(showInv);
       if (showInv && customerIds.length === 0) {
-        fetch(API_CUSTOMERIDS)
+        authenticatedFetch(API_CUSTOMERIDS)
           .then(res => res.json())
           .then(data => setCustomerIds(data))
           .catch(err => console.error('Fehler beim Laden der CustomerIDs:', err));
@@ -205,11 +206,8 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
     };
 
     try {
-      const response = await fetch(`${API_SINGLE_PRODUCTS}/${productId}`, {
+      const response = await authenticatedFetch(`${API_SINGLE_PRODUCTS}/${productId}`, {
         method: "PUT",
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(dataToSend),
       });
 
@@ -222,7 +220,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
       setEditMode(false);
       
       // Nach dem Speichern neu laden
-      const updatedProduct = await fetch(`${API_SINGLE_PRODUCTS}/${productId}`)
+      const updatedProduct = await authenticatedFetch(`${API_SINGLE_PRODUCTS}/${productId}`)
         .then(res => res.json());
       setProductData(updatedProduct);
       
@@ -714,7 +712,7 @@ const ProductEdit = ({ productId: propProductId, onSave, startInEditMode = false
                 
                 if (window.confirm(`Möchten Sie das Produkt "${typeName}" mit der Seriennummer "${serial}" wirklich löschen?`)) {
                   try {
-                    const res = await fetch(`${API_SINGLE_PRODUCTS.replace('?set=', '')}/${productId}`, { 
+                    const res = await authenticatedFetch(`${API_SINGLE_PRODUCTS.replace('?set=', '')}/${productId}`, { 
                       method: 'DELETE' 
                     });
                     if (res.ok) {

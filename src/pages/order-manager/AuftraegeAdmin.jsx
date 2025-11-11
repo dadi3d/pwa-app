@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserData, useAuth } from '../services/auth';
+import { fetchUserData, useAuth, authenticatedFetch } from '../services/auth';
 import { MAIN_VARIABLES } from '../../config';
 
 export default function Auftraege() {
@@ -21,15 +21,7 @@ export default function Auftraege() {
       }
       setUserId(user.id || user._id);
 
-      const res = await fetch(
-        `${MAIN_VARIABLES.SERVER_URL}/api/orders`,
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+      const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders`);
       let myOrders;
       try {
         myOrders = await res.json();
@@ -41,9 +33,7 @@ export default function Auftraege() {
     }
     async function loadOrderStates() {
       try {
-        const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderStates`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderStates`);
         const data = await res.json();
         setOrderStates(Array.isArray(data) ? data : []);
       } catch {
@@ -187,14 +177,10 @@ export default function Auftraege() {
                           onClick={async () => {
                             if (!window.confirm('Diesen Auftrag wirklich löschen?')) return;
                             try {
-                              const res = await fetch(
+                              const res = await authenticatedFetch(
                                 `${MAIN_VARIABLES.SERVER_URL}/api/orders/${order._id}`,
                                 {
-                                  method: 'DELETE',
-                                  headers: {
-                                    'Authorization': `Bearer ${token}`,
-                                    'Content-Type': 'application/json'
-                                  }
+                                  method: 'DELETE'
                                 }
                               );
                               if (res.ok) {

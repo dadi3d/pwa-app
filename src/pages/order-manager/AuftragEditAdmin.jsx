@@ -1,7 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { MAIN_VARIABLES } from '../../config';
-import { useAuth } from '../services/auth';
+import { useAuth, authenticatedFetch } from '../services/auth';
 
 // Stift-Icon als Komponente (SVG)
 const EditIcon = () => (
@@ -35,9 +35,7 @@ function AuftragEditAdmin({ orderId, onSuccess }) {
     async function fetchOrder() {
       setLoading(true);
       try {
-        const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders?`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders?`);
         const orders = await res.json();
         const found = orders.find(o => o._id === currentOrderId);
         setOrder(found || null);
@@ -47,7 +45,7 @@ function AuftragEditAdmin({ orderId, onSuccess }) {
           const thumbnails = {};
           for (const set of found.sets) {
             try {
-              const thumbnailRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
+              const thumbnailRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/data/set-thumbnail/${set._id}`);
               const thumbnailData = await thumbnailRes.json();
               thumbnails[set._id] = `${MAIN_VARIABLES.SERVER_URL}${thumbnailData.path}`;
             } catch (err) {
@@ -68,9 +66,9 @@ function AuftragEditAdmin({ orderId, onSuccess }) {
   useEffect(() => {
     async function fetchDropdowns() {
       const [typesRes, statesRes, teachersRes] = await Promise.all([
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderTypes`).then(r => r.json()),
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderStates`).then(r => r.json()),
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users?role=teacher`).then(r => r.json())
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderTypes`).then(r => r.json()),
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orderStates`).then(r => r.json()),
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users?role=teacher`).then(r => r.json())
       ]);
       setTypes(typesRes);
       setStates(statesRes);
@@ -110,12 +108,8 @@ function AuftragEditAdmin({ orderId, onSuccess }) {
         sets: order.sets.map(set => set._id),
         state: getId(order.state),
       };
-      const res = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders/${objectID}`, {
+      const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/orders/${objectID}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
         body: JSON.stringify(payload)
       });
       if (!res.ok) {

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MAIN_VARIABLES } from "../../config";
+import { authenticatedFetch } from "../../utils/authenticatedFetch";
 import "./SetAnlegen.css";
 
 export default function SetKopieren() {
@@ -53,13 +54,13 @@ export default function SetKopieren() {
   async function loadDropdownData() {
     try {
       const [brandsRes, categoriesRes, statesRes, statusRes, intervalsRes, customerIdsRes, roomsRes] = await Promise.all([
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`),
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`),
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-states`),
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-status`),
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-test-intervals`),
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-customerids`),
-        fetch(`${MAIN_VARIABLES.SERVER_URL}/api/rooms`)
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`),
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`),
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-states`),
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-status`),
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-test-intervals`),
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-customerids`),
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/rooms`)
       ]);
 
       const [brandsData, categoriesData, statesData, statusData, intervalsData, customerIdsData, roomsData] = await Promise.all([
@@ -91,7 +92,7 @@ export default function SetKopieren() {
       setLoading(true);
       
       // Set laden
-      const setRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`);
+      const setRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`);
       if (!setRes.ok) {
         throw new Error("Set nicht gefunden");
       }
@@ -102,14 +103,14 @@ export default function SetKopieren() {
       await loadThumbnails(setData);
 
       // Neue Set-Nummer ermitteln
-      const nextNumberRes = await fetch(
+      const nextNumberRes = await authenticatedFetch(
         `${MAIN_VARIABLES.SERVER_URL}/api/sets/next-set-number?brand=${setData.manufacturer._id}&setName=${setData.set_name._id}&setRelation=${setData.set_relation._id}`
       );
       const nextNumberData = await nextNumberRes.json();
       setNewSetNumber(nextNumberData.nextSetNumber || 1);
 
       // Produkte des Sets laden
-      const productsRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=${setId}`);
+      const productsRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products?set=${setId}`);
       if (!productsRes.ok) {
         throw new Error("Fehler beim Laden der Produkte");
       }
@@ -159,7 +160,7 @@ export default function SetKopieren() {
   async function loadThumbnails(setData) {
     try {
       // Alle verfügbaren File-Daten laden (wie in SetAnlegen.jsx)
-      const allFilesRes = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data`);
+      const allFilesRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data`);
       const allFiles = await allFilesRes.json();
       
       // Nur Bilder filtern
@@ -459,7 +460,7 @@ export default function SetKopieren() {
         formData.append(key, setData[key]);
       });
 
-      const setResponse = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`, {
+      const setResponse = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`, {
         method: "POST",
         body: formData
       });
@@ -480,7 +481,7 @@ export default function SetKopieren() {
             // FileData für das neue Set aktualisieren
             const updatedSets = selectedThumb.sets ? [...selectedThumb.sets.map(s => s._id), newSetId] : [newSetId];
             
-            await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data/${selectedThumbnail}`, {
+            await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data/${selectedThumbnail}`, {
               method: "PUT",
               headers: {
                 "Content-Type": "application/json"
@@ -542,7 +543,7 @@ export default function SetKopieren() {
         try {
           console.log('Sending product data:', productData); // Debug log
           
-          const productResponse = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products`, {
+          const productResponse = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/single-products`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json"

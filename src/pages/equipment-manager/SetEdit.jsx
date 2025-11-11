@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { MAIN_VARIABLES } from "../../config";
+import { authenticatedFetch } from "../services/auth";
 
 const API_BRANDS = `${MAIN_VARIABLES.SERVER_URL}/api/brands`;
 const API_CATEGORIES = `${MAIN_VARIABLES.SERVER_URL}/api/categories`;
@@ -39,12 +40,12 @@ const SetEdit = ({ setId: propSetId }) => {
     // Alle Referenzdaten laden
     async function loadRefs() {
       const [b, c, s, r, a, sn] = await Promise.all([
-        fetch(API_BRANDS).then(res => res.json()),
-        fetch(API_CATEGORIES).then(res => res.json()),
-        fetch(API_STATES).then(res => res.json()),
-        fetch(API_RELATIONS).then(res => res.json()),
-        fetch(API_ASSIGNMENTS).then(res => res.json()),
-        fetch(API_SETNAMES).then(res => res.json()),
+        authenticatedFetch(API_BRANDS).then(res => res.json()),
+        authenticatedFetch(API_CATEGORIES).then(res => res.json()),
+        authenticatedFetch(API_STATES).then(res => res.json()),
+        authenticatedFetch(API_RELATIONS).then(res => res.json()),
+        authenticatedFetch(API_ASSIGNMENTS).then(res => res.json()),
+        authenticatedFetch(API_SETNAMES).then(res => res.json()),
       ]);
       setBrands(b);
       setCategories(c);
@@ -55,7 +56,7 @@ const SetEdit = ({ setId: propSetId }) => {
     }
     loadRefs();
     // FileDatas laden
-    fetch(API_FILEDATA)
+    authenticatedFetch(API_FILEDATA)
       .then(res => res.json())
       .then(setFileDatas);
   }, []);
@@ -63,7 +64,7 @@ const SetEdit = ({ setId: propSetId }) => {
   useEffect(() => {
     if (!setId) return;
     // Set-Daten laden
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`)
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`)
         .then(res => res.json())
         .then(data => {
         setSetData({
@@ -78,7 +79,7 @@ const SetEdit = ({ setId: propSetId }) => {
         setLoading(false);
         });
     // Produkte laden
-    fetch(`${API_SINGLE_PRODUCTS}?set=${setId}`)
+    authenticatedFetch(`${API_SINGLE_PRODUCTS}?set=${setId}`)
         .then(res => res.json())
         .then(setProducts);
     }, [setId]);
@@ -125,7 +126,7 @@ const SetEdit = ({ setId: propSetId }) => {
     if (!window.confirm(confirmMessage)) return;
     try {
       // Set löschen (Server entfernt automatisch die Set-ID aus den fileDatas)
-      await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${id}`, { method: "DELETE" });
+      await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${id}`, { method: "DELETE" });
       
       alert("Set und alle verbundenen Produkte wurden gelöscht!");
       if (typeof window.history.go === "function") {
@@ -138,11 +139,11 @@ const SetEdit = ({ setId: propSetId }) => {
     }
     }  // Thumbnail per Klick setzen
 async function handleSetThumbnail(fileId) {
-  await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data/set-thumbnail/${fileId}`, {
+  await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data/set-thumbnail/${fileId}`, {
     method: "POST",
   });
   // Nach Änderung neu laden
-  fetch(API_FILEDATA)
+  authenticatedFetch(API_FILEDATA)
     .then(res => res.json())
     .then(setFileDatas);
 }
@@ -150,9 +151,9 @@ async function handleSetThumbnail(fileId) {
   // Datei löschen
   async function handleDeleteFile(fileId) {
     if (!window.confirm("Datei wirklich löschen?")) return;
-    await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data/${fileId}`, { method: "DELETE" });
+    await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data/${fileId}`, { method: "DELETE" });
     // Nach dem Löschen neu laden
-    fetch(API_FILEDATA)
+    authenticatedFetch(API_FILEDATA)
       .then(res => res.json())
       .then(setFileDatas);
   }
@@ -171,13 +172,13 @@ async function handleSetThumbnail(fileId) {
       formData.append("manufacturer", setData.manufacturer);
       formData.append("type", type);
       formData.append("isThumbnail", type === "thumbnail");
-      await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data`, {
+      await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/file-data`, {
         method: "POST",
         body: formData,
       });
     }
     // Nach Upload neu laden
-    fetch(API_FILEDATA)
+    authenticatedFetch(API_FILEDATA)
       .then(res => res.json())
       .then(setFileDatas);
     inputRef.current.value = "";
@@ -223,7 +224,7 @@ async function handleSetThumbnail(fileId) {
         }
     }
 
-    await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`, {
+    await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`, {
         method: "PUT",
         body: formData,
     });
@@ -231,7 +232,7 @@ async function handleSetThumbnail(fileId) {
     setSaving(false);
     setEditMode(false);
     // Nach dem Speichern neu laden
-    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`)
+    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`)
         .then(res => res.json())
         .then(data => {
         setSetData({
@@ -245,7 +246,7 @@ async function handleSetThumbnail(fileId) {
         });
         });
     // FileDatas neu laden
-    fetch(API_FILEDATA)
+    authenticatedFetch(API_FILEDATA)
         .then(res => res.json())
         .then(setFileDatas);
 
