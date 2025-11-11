@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MAIN_VARIABLES } from "../../config";
-import { authenticatedFetch } from "../../utils/authenticatedFetch";
+import { authenticatedFetch } from "../services/auth";
 import "./SetAnlegen.css";
 
 export default function SetKopieren() {
