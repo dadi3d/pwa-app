@@ -6,7 +6,7 @@ import { Input } from '../styles/catalyst/input';
 import { Select } from '../styles/catalyst/select';
 import { Badge } from '../styles/catalyst/badge';
 import { Dropdown, DropdownButton, DropdownMenu, DropdownItem } from '../styles/catalyst/dropdown';
-import { ChevronDownIcon } from '@heroicons/react/16/solid';
+import { ChevronDownIcon, PlusIcon, TrashIcon } from '@heroicons/react/16/solid';
 
 export default function Nutzer() {
     const [users, setUsers] = useState([]);
@@ -14,6 +14,18 @@ export default function Nutzer() {
     const [updatedUserId, setUpdatedUserId] = useState(null);
     const [searchTerm, setSearchTerm] = useState(''); // Suchbegriff
     const [selectedRole, setSelectedRole] = useState(''); // Rollenfilter
+
+    // Modal-States für Benutzer hinzufügen
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [newUser, setNewUser] = useState({
+        id: '',
+        name: '',
+        email: '',
+        password: '',
+        role: 'student'
+    });
+    const [addModalMessage, setAddModalMessage] = useState('');
+    const [addModalLoading, setAddModalLoading] = useState(false);
 
     const [userId, setUserId] = useState('');
     const [userRole, setUserRole] = useState('student');
@@ -63,6 +75,94 @@ export default function Nutzer() {
         }
         setUpdatedUserId(id);
         setTimeout(() => setUpdatedUserId(null), 2000);
+    };
+
+    const handleAddUser = async () => {
+        setAddModalMessage('');
+        setAddModalLoading(true);
+
+        // Validierung
+        if (!newUser.id.trim()) {
+            setAddModalMessage('Benutzer-ID ist erforderlich');
+            setAddModalLoading(false);
+            return;
+        }
+        if (!newUser.password.trim()) {
+            setAddModalMessage('Passwort ist erforderlich');
+            setAddModalLoading(false);
+            return;
+        }
+        if (newUser.password.length < 6) {
+            setAddModalMessage('Passwort muss mindestens 6 Zeichen lang sein');
+            setAddModalLoading(false);
+            return;
+        }
+
+        try {
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    id: newUser.id.trim(),
+                    password: newUser.password,
+                    name: newUser.name.trim() || undefined,
+                    email: newUser.email.trim() || undefined,
+                    role: newUser.role,
+                    authMethod: 'local'
+                }),
+            });
+
+            if (response.ok) {
+                // Benutzer zur Liste hinzufügen
+                const createdUser = {
+                    id: newUser.id.trim(),
+                    name: newUser.name.trim() || null,
+                    email: newUser.email.trim() || null,
+                    role: newUser.role,
+                    authMethod: 'local'
+                };
+                setUsers(prev => [...prev, createdUser]);
+                
+                // Modal schließen und zurücksetzen
+                setShowAddModal(false);
+                setNewUser({
+                    id: '',
+                    name: '',
+                    email: '',
+                    password: '',
+                    role: 'student'
+                });
+                setAddModalMessage('');
+            } else {
+                const errorData = await response.json();
+                setAddModalMessage(errorData.error || 'Fehler beim Erstellen des Benutzers');
+            }
+        } catch (error) {
+            console.error('Fehler beim Erstellen des Benutzers:', error);
+            setAddModalMessage('Netzwerkfehler beim Erstellen des Benutzers');
+        }
+        setAddModalLoading(false);
+    };
+
+    const handleDeleteUser = async (id) => {
+        if (!confirm(`Möchten Sie den Benutzer "${id}" wirklich löschen?`)) {
+            return;
+        }
+
+        try {
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (response.ok) {
+                setUsers(prev => prev.filter(user => user.id !== id));
+            } else {
+                const errorData = await response.json();
+                alert(errorData.error || 'Fehler beim Löschen des Benutzers');
+            }
+        } catch (error) {
+            console.error('Fehler beim Löschen des Benutzers:', error);
+            alert('Netzwerkfehler beim Löschen des Benutzers');
+        }
     };
 
     if (loading) return (
@@ -129,11 +229,22 @@ export default function Nutzer() {
             {/* Filter und Suchbereich */}
             <div className="max-w-4xl mx-auto mb-8">
                 <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-                    <p className="text-sm text-gray-600 mb-4">
-                        Gesamt: <strong>{users.length}</strong> Benutzer
-                        {(searchTerm || selectedRole) && ` • Angezeigt: `}
-                        {(searchTerm || selectedRole) && <strong>{filteredUsers.length}</strong>}
-                    </p>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                        <p className="text-sm text-gray-600">
+                            Gesamt: <strong>{users.length}</strong> Benutzer
+                            {(searchTerm || selectedRole) && ` • Angezeigt: `}
+                            {(searchTerm || selectedRole) && <strong>{filteredUsers.length}</strong>}
+                        </p>
+                        
+                        {/* Benutzer hinzufügen Button */}
+                        <button
+                            onClick={() => setShowAddModal(true)}
+                            className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm"
+                        >
+                            <PlusIcon className="size-4 mr-2" />
+                            Benutzer hinzufügen
+                        </button>
+                    </div>
                     
                     <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
                         {/* Suchfeld */}
@@ -232,7 +343,7 @@ export default function Nutzer() {
                                             </div>
                                         </div>
                                         
-                                        {/* Rollenauswahl */}
+                                        {/* Rollenauswahl und Aktionen */}
                                         <div className="flex items-center gap-3 lg:flex-shrink-0">
                                             <label className="text-sm font-medium text-gray-700 whitespace-nowrap hidden sm:block">
                                                 Rolle:
@@ -251,6 +362,14 @@ export default function Nutzer() {
                                                     ✓
                                                 </span>
                                             )}
+                                            {/* Löschen Button */}
+                                            <button
+                                                onClick={() => handleDeleteUser(user.id)}
+                                                className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                                                title="Benutzer löschen"
+                                            >
+                                                <TrashIcon className="size-4" />
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -259,6 +378,167 @@ export default function Nutzer() {
                     </div>
                 )}
             </div>
+
+            {/* Modal für Benutzer hinzufügen */}
+            {showAddModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-semibold text-gray-900">
+                                    Neuen Benutzer hinzufügen
+                                </h2>
+                                <button
+                                    onClick={() => {
+                                        setShowAddModal(false);
+                                        setNewUser({
+                                            id: '',
+                                            name: '',
+                                            email: '',
+                                            password: '',
+                                            role: 'student'
+                                        });
+                                        setAddModalMessage('');
+                                    }}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                                >
+                                    <span className="sr-only">Schließen</span>
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <div className="space-y-4">
+                                {/* Benutzer-ID */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Benutzer-ID *
+                                    </label>
+                                    <Input
+                                        type="text"
+                                        value={newUser.id}
+                                        onChange={(e) => setNewUser(prev => ({ ...prev, id: e.target.value }))}
+                                        placeholder="z.B. max.mustermann"
+                                        className="w-full"
+                                        disabled={addModalLoading}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Eindeutige ID für den Benutzer (nur lokale Authentifizierung)
+                                    </p>
+                                </div>
+
+                                {/* Passwort */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Passwort *
+                                    </label>
+                                    <Input
+                                        type="password"
+                                        value={newUser.password}
+                                        onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
+                                        placeholder="Mindestens 6 Zeichen"
+                                        className="w-full"
+                                        disabled={addModalLoading}
+                                    />
+                                </div>
+
+                                {/* Name */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Name (optional)
+                                    </label>
+                                    <Input
+                                        type="text"
+                                        value={newUser.name}
+                                        onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
+                                        placeholder="Max Mustermann"
+                                        className="w-full"
+                                        disabled={addModalLoading}
+                                    />
+                                </div>
+
+                                {/* E-Mail */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        E-Mail (optional)
+                                    </label>
+                                    <Input
+                                        type="email"
+                                        value={newUser.email}
+                                        onChange={(e) => setNewUser(prev => ({ ...prev, email: e.target.value }))}
+                                        placeholder="max.mustermann@example.com"
+                                        className="w-full"
+                                        disabled={addModalLoading}
+                                    />
+                                </div>
+
+                                {/* Rolle */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Rolle *
+                                    </label>
+                                    <Select
+                                        value={newUser.role}
+                                        onChange={(e) => setNewUser(prev => ({ ...prev, role: e.target.value }))}
+                                        className="w-full"
+                                        disabled={addModalLoading}
+                                    >
+                                        <option value="student">Student</option>
+                                        <option value="teacher">Lehrer</option>
+                                        <option value="admin">Admin</option>
+                                    </Select>
+                                </div>
+
+                                {/* Fehlermeldung */}
+                                {addModalMessage && (
+                                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                                        <p className="text-sm text-red-600">{addModalMessage}</p>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Buttons */}
+                            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+                                <button
+                                    onClick={() => {
+                                        setShowAddModal(false);
+                                        setNewUser({
+                                            id: '',
+                                            name: '',
+                                            email: '',
+                                            password: '',
+                                            role: 'student'
+                                        });
+                                        setAddModalMessage('');
+                                    }}
+                                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200"
+                                    disabled={addModalLoading}
+                                >
+                                    Abbrechen
+                                </button>
+                                <button
+                                    onClick={handleAddUser}
+                                    disabled={addModalLoading || !newUser.id.trim() || !newUser.password.trim()}
+                                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
+                                >
+                                    {addModalLoading ? (
+                                        <>
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            Erstelle...
+                                        </>
+                                    ) : (
+                                        'Benutzer erstellen'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
