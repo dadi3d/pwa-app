@@ -1,6 +1,7 @@
 import { useAuth } from './services/auth';
 import { useEffect, useState } from 'react';
 import { MAIN_VARIABLES } from '../config';
+import '../styles/globals.css';
 
 export default function Logout() {
     const logout = useAuth(state => state.logout);
@@ -67,8 +68,6 @@ export default function Logout() {
             
             setIsLoggingOut(false);
             setLogoutComplete(true);
-            // URL Parameter für erfolgreiches Logout setzen
-            window.history.replaceState({}, '', '/logout?complete=true');
             
         } catch (error) {
             console.error('Fehler beim Logout:', error);
@@ -76,8 +75,6 @@ export default function Logout() {
             logout();
             setIsLoggingOut(false);
             setLogoutComplete(true);
-            // URL Parameter für erfolgreiches Logout setzen
-            window.history.replaceState({}, '', '/logout?complete=true');
         }
     };
 
@@ -105,7 +102,26 @@ export default function Logout() {
                 <main className="container mx-auto px-4 py-8">
                     <div className="text-center">
                         <button
-                            className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                            style={{
+                                backgroundColor: 'var(--color-primary)',
+                                color: 'white',
+                                padding: 'var(--spacing-md) var(--spacing-lg)',
+                                borderRadius: 'var(--radius-md)',
+                                border: 'none',
+                                fontSize: '1rem',
+                                fontWeight: 500,
+                                cursor: 'pointer',
+                                boxShadow: 'var(--shadow-1)',
+                                transition: 'all 0.2s ease-in-out'
+                            }}
+                            onMouseEnter={(e) => {
+                                e.target.style.backgroundColor = 'var(--color-primary-dark)';
+                                e.target.style.boxShadow = 'var(--shadow-2)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.target.style.backgroundColor = 'var(--color-primary)';
+                                e.target.style.boxShadow = 'var(--shadow-1)';
+                            }}
                             onClick={() => (window.location.href = "/login")}
                         >
                             Anmelden

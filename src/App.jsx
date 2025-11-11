@@ -66,14 +66,9 @@ const menuConfig = {
 function MobileMenu({ userRole }) {
   const location = useLocation();
 
-  // Kein Menü auf Login-Seiten anzeigen
-  const loginPaths = ['/', '/login', '/admin'];
+  // Kein Menü auf Login-Seiten und Logout-Seite anzeigen
+  const loginPaths = ['/', '/login', '/admin', '/logout'];
   if (loginPaths.includes(location.pathname)) {
-    return null;
-  }
-
-  // Kein Menü anzeigen, wenn Logout erfolgreich abgeschlossen wurde
-  if (location.pathname === '/logout' && location.search.includes('complete=true')) {
     return null;
   }
 
