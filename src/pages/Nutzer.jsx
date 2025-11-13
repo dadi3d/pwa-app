@@ -319,6 +319,7 @@ export default function Nutzer() {
                                                     {user.first_name ? user.first_name.charAt(0).toUpperCase() : user.id.charAt(0).toUpperCase()}
                                                 </div>
                                                 
+                                                
                                                 {/* Linke Spalte: Badge und ID */}
                                                 <div className="flex-shrink-0">
                                                     <div className="flex items-center gap-2 mb-1">
