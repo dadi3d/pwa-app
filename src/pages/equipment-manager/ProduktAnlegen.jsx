@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MAIN_VARIABLES } from '../../config';
 import { useAuth, fetchUserData, authenticatedFetch } from '../services/auth';
+import { Button } from '@headlessui/react';
+import { PlusIcon } from '@heroicons/react/24/outline';
 
 export default function ProduktAnlegen() {
     const messageRef = useRef();
@@ -262,350 +264,399 @@ export default function ProduktAnlegen() {
     }
 
     return (
-    <>
-        <style>
-            {`
-            .vite-form {
-                background: #fff;
-                border-radius: 12px;
-                box-shadow: 0 2px 8px #0001;
-                padding: 2rem;
-                font-family: system-ui, sans-serif;
-                margin: 2rem auto;
-                min-width: 300px;
-            }
-            .vite-form ul {
-                padding: 0;
-                margin: 0;
-            }
-            .vite-form li {
-                margin-bottom: 1.2rem;
-                display: flex;
-                flex-direction: column;
-            }
-            .vite-form label {
-                font-weight: 500;
-                margin-bottom: 0.3rem;
-            }
-            .vite-form input,
-            .vite-form select {
-                padding: 0.5rem 0.7rem;
-                border: 1px solid #d0d7de;
-                border-radius: 6px;
-                font-size: 1rem;
-                background: #f6f8fa;
-                transition: border 0.2s;
-            }
-            .vite-form input:focus,
-            .vite-form select:focus {
-                border-color: #646cff;
-                outline: none;
-            }
-            .vite-form button {
-                background: #646cff;
-                color: #fff;
-                border: none;
-                border-radius: 6px;
-                padding: 0.7rem 1.2rem;
-                font-size: 1rem;
-                cursor: pointer;
-                transition: background 0.2s;
-            }
-            .vite-form button:hover {
-                background: #535bf2;
-            }
-            #message {
-                min-height: 1.5em;
-                font-size: 1rem;
-                margin-top: 0.5rem;
-            }
-            `}
-        </style>
-        <h1 style={{ textAlign: 'center', marginTop: '1.5rem', color: '#2a3b4c' }}>Neues Produkt anlegen</h1>
-        <form className="vite-form" onSubmit={submitProduct}>
-            <ul>
-                <li>
-                    <label htmlFor="setSelect">Set</label>
-                    <a>Welchem Set soll das Produkt zugeordnet werden?</a>
-                    <select id="setSelect" required onChange={handleSetChange} />
-                </li>
-                <li>
-                    <label htmlFor="brandSelect">Hersteller</label>
-                    <a>Wählen Sie den Hersteller des Produkts.</a>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <select id="brandSelect" required style={{ flex: 1 }} />
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                const name = prompt('Neuen Hersteller anlegen:');
-                                if (!name || !name.trim()) return;
-                                try {
-                                    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`, {
-                                        method: 'POST',
-                                        body: JSON.stringify({ name: name.trim() })
-                                    });
-                                    if (res.status === 409) {
-                                        alert('Dieser Hersteller existiert bereits (auch in anderer Schreibweise).');
-                                        return;
-                                    }
-                                    if (!res.ok) {
-                                        alert('Fehler beim Speichern.');
-                                        return;
-                                    }
-                                    loadDropdown(`${MAIN_VARIABLES.SERVER_URL}/api/brands`, 'brandSelect');
-                                } catch (err) {
-                                    alert('Fehler beim Hinzufügen des Herstellers.');
-                                }
-                            }}
-                            title="Neuen Hersteller hinzufügen"
-                            style={{ padding: '0 12px' }}
-                        >+</button>
-                    </div>
-                </li>
-                <li>
-                    <label htmlFor="type">Typenbezeichnung</label>
-                    <a >Wie lautet die Bezeichnung des Produkts (Beispiel: SEL2470GM2)?</a>
-                    <input id="type" required />
-                </li>
-                <li>
-                    <label htmlFor="designationSelect">Kategorie</label>
-                    <a>Wählen Sie die Kategorie des Produkts, wenn möglich aus den Vorgaben.</a>
-                    <div style={{ display: 'flex', gap: 8 }}>
-                        <select id="designationSelect" required style={{ flex: 1 }} />
-                        <button
-                            type="button"
-                            onClick={async () => {
-                                const name = prompt('Neue Kategorie anlegen:');
-                                if (!name || !name.trim()) return;
-                                try {
-                                    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`, {
-                                        method: 'POST',
-                                        body: JSON.stringify({ name: name.trim() })
-                                    });
-                                    if (res.status === 409) {
-                                        alert('Diese Produkt-Kategorie existiert bereits (auch in anderer Schreibweise).');
-                                        return;
-                                    }
-                                    if (!res.ok) {
-                                        alert('Fehler beim Speichern.');
-                                        return;
-                                    }
-                                    loadDropdown(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`, 'designationSelect');
-                                } catch (err) {
-                                    alert('Fehler beim Hinzufügen der Kategorie.');
-                                }
-                            }}
-                            title="Neue Kategorie hinzufügen"
-                            style={{ padding: '0 12px' }}
-                        >+</button>
-                    </div>
-                </li>
-                <li>
-                    <label htmlFor="serial">Seriennummer</label>
-                    <a>Wie lautet die Seriennummer des Produkts, falls vorhanden?</a>
-                    <input id="serial" />
-                </li>
-                <li>
-                    <label htmlFor="order">Bestellnummer</label>
-                    <a>Wie lautet die vom Haushalt vergebene Bestellnummer?</a>
-                    <input id="order" required />
-                </li>
-                <li>
-                    <label htmlFor="price">Preis</label>
-                    <a>Wie hoch ist der Preis des Produkts in Euro?</a>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ position: 'relative', flex: 1 }}>
-                            <input 
-                                id="price" 
-                                type="number" 
-                                step="0.01" 
-                                min="0" 
-                                placeholder="0.00"
-                                disabled={priceConsidered}
-                                style={{ 
-                                    width: '100%', 
-                                    paddingRight: '30px',
-                                    padding: '0.5rem 30px 0.5rem 0.7rem',
-                                    border: '1px solid #d0d7de',
-                                    borderRadius: '6px',
-                                    fontSize: '1rem',
-                                    background: priceConsidered ? '#f0f0f0' : '#f6f8fa',
-                                    color: priceConsidered ? '#999' : '#000'
-                                }} 
-                            />
-                            <span style={{ 
-                                position: 'absolute', 
-                                right: '8px', 
-                                top: '50%', 
-                                transform: 'translateY(-50%)', 
-                                color: priceConsidered ? '#ccc' : '#666',
-                                pointerEvents: 'none'
-                            }}>€</span>
+        <div className="min-h-screen bg-gray-50 p-6">
+            <div className="max-w-4xl mx-auto">
+                <div className="bg-white rounded-lg shadow-sm p-6">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">Neues Produkt anlegen</h1>
+                    
+                    <form onSubmit={submitProduct}>
+                        <div className="space-y-8">
+                            {/* Grunddaten Sektion */}
+                            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <span className="bg-orange-500 text-black w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
+                                    Grunddaten
+                                </h2>
+                                <div className="space-y-6">
+                                    {/* Set */}
+                                    <div>
+                                        <label htmlFor="setSelect" className="block text-sm font-medium text-gray-900 mb-1">Set</label>
+                                        <p className="text-sm text-gray-600 mb-2">Welchem Set soll das Produkt zugeordnet werden?</p>
+                                        <select 
+                                            id="setSelect" 
+                                            required 
+                                            onChange={handleSetChange}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                        />
+                                    </div>
+
+                                    {/* Hersteller */}
+                                    <div>
+                                        <label htmlFor="brandSelect" className="block text-sm font-medium text-gray-900 mb-1">Hersteller</label>
+                                        <p className="text-sm text-gray-600 mb-2">Wählen Sie den Hersteller des Produkts.</p>
+                                        <div className="flex gap-2">
+                                            <select 
+                                                id="brandSelect" 
+                                                required 
+                                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                            />
+                                            <Button
+                                                type="button"
+                                                onClick={async () => {
+                                                    const name = prompt('Neuen Hersteller anlegen:');
+                                                    if (!name || !name.trim()) return;
+                                                    try {
+                                                        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`, {
+                                                            method: 'POST',
+                                                            body: JSON.stringify({ name: name.trim() })
+                                                        });
+                                                        if (res.status === 409) {
+                                                            alert('Dieser Hersteller existiert bereits (auch in anderer Schreibweise).');
+                                                            return;
+                                                        }
+                                                        if (!res.ok) {
+                                                            alert('Fehler beim Speichern.');
+                                                            return;
+                                                        }
+                                                        loadDropdown(`${MAIN_VARIABLES.SERVER_URL}/api/brands`, 'brandSelect');
+                                                    } catch (err) {
+                                                        alert('Fehler beim Hinzufügen des Herstellers.');
+                                                    }
+                                                }}
+                                                className="bg-orange-500 hover:bg-orange-600 text-black px-3 py-2 rounded-md transition-colors"
+                                                title="Neuen Hersteller hinzufügen"
+                                            >
+                                                <PlusIcon className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* Typenbezeichnung */}
+                                    <div>
+                                        <label htmlFor="type" className="block text-sm font-medium text-gray-900 mb-1">Typenbezeichnung</label>
+                                        <p className="text-sm text-gray-600 mb-2">Wie lautet die Bezeichnung des Produkts (Beispiel: SEL2470GM2)?</p>
+                                        <input 
+                                            id="type" 
+                                            required 
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                        />
+                                    </div>
+
+                                    {/* Kategorie */}
+                                    <div>
+                                        <label htmlFor="designationSelect" className="block text-sm font-medium text-gray-900 mb-1">Kategorie</label>
+                                        <p className="text-sm text-gray-600 mb-2">Wählen Sie die Kategorie des Produkts, wenn möglich aus den Vorgaben.</p>
+                                        <div className="flex gap-2">
+                                            <select 
+                                                id="designationSelect" 
+                                                required 
+                                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                            />
+                                            <Button
+                                                type="button"
+                                                onClick={async () => {
+                                                    const name = prompt('Neue Kategorie anlegen:');
+                                                    if (!name || !name.trim()) return;
+                                                    try {
+                                                        const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`, {
+                                                            method: 'POST',
+                                                            body: JSON.stringify({ name: name.trim() })
+                                                        });
+                                                        if (res.status === 409) {
+                                                            alert('Diese Produkt-Kategorie existiert bereits (auch in anderer Schreibweise).');
+                                                            return;
+                                                        }
+                                                        if (!res.ok) {
+                                                            alert('Fehler beim Speichern.');
+                                                            return;
+                                                        }
+                                                        loadDropdown(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`, 'designationSelect');
+                                                    } catch (err) {
+                                                        alert('Fehler beim Hinzufügen der Kategorie.');
+                                                    }
+                                                }}
+                                                className="bg-orange-500 hover:bg-orange-600 text-black px-3 py-2 rounded-md transition-colors"
+                                                title="Neue Kategorie hinzufügen"
+                                            >
+                                                <PlusIcon className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* Seriennummer */}
+                                    <div>
+                                        <label htmlFor="serial" className="block text-sm font-medium text-gray-900 mb-1">Seriennummer</label>
+                                        <p className="text-sm text-gray-600 mb-2">Wie lautet die Seriennummer des Produkts, falls vorhanden?</p>
+                                        <input 
+                                            id="serial" 
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                        />
+                                    </div>
+
+                                    {/* Bestellnummer */}
+                                    <div>
+                                        <label htmlFor="order" className="block text-sm font-medium text-gray-900 mb-1">Bestellnummer</label>
+                                        <p className="text-sm text-gray-600 mb-2">Wie lautet die vom Haushalt vergebene Bestellnummer?</p>
+                                        <input 
+                                            id="order" 
+                                            required 
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                        />
+                                    </div>
+
+                                    {/* Preis */}
+                                    <div>
+                                        <label htmlFor="price" className="block text-sm font-medium text-gray-900 mb-1">Preis</label>
+                                        <p className="text-sm text-gray-600 mb-2">Wie hoch ist der Preis des Produkts in Euro?</p>
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative flex-1">
+                                                <input 
+                                                    id="price" 
+                                                    type="number" 
+                                                    step="0.01" 
+                                                    min="0" 
+                                                    placeholder="0.00"
+                                                    disabled={priceConsidered}
+                                                    className={`w-full pr-8 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 ${
+                                                        priceConsidered ? 'bg-gray-100 text-gray-500' : ''
+                                                    }`}
+                                                />
+                                                <span className={`absolute right-3 top-1/2 transform -translate-y-1/2 ${
+                                                    priceConsidered ? 'text-gray-400' : 'text-gray-600'
+                                                }`}>€</span>
+                                            </div>
+                                            <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+                                                <input 
+                                                    type="checkbox" 
+                                                    id="priceConsidered" 
+                                                    checked={priceConsidered}
+                                                    onChange={handlePriceConsideredChange}
+                                                    className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+                                                />
+                                                Preis wurde bereits berücksichtigt
+                                            </label>
+                                        </div>
+                                        {priceConsidered && (
+                                            <p className="text-sm text-gray-500 italic mt-1">
+                                                Der eingegebene Preiswert wird nicht gespeichert, da er bereits berücksichtigt wurde.
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Raumnummer */}
+                                    <div>
+                                        <label htmlFor="room" className="block text-sm font-medium text-gray-900 mb-1">Raumnummer</label>
+                                        <p className="text-sm text-gray-600 mb-2">Wie lautet die Raumnummer, in dem das Produkt verwendet / gelagert wird?</p>
+                                        <select 
+                                            id="room" 
+                                            required
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                        >
+                                            <option value="">-- Bitte wählen --</option>
+                                            {roomOptions.map(room => (
+                                                <option key={room._id} value={room._id}>{room.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Inventarisierung Sektion */}
+                            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <span className="bg-orange-500 text-black w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
+                                    Inventarisierung
+                                </h2>
+                                <div className="space-y-6">
+                                    {/* Inventarisierung */}
+                                    <div>
+                                        <label htmlFor="showAreaIvsDropdown" className="block text-sm font-medium text-gray-900 mb-1">Inventarisierung?</label>
+                                        <p className="text-sm text-gray-600 mb-2">Wird das Produkt inventarisiert (Produktwert &gt; 800€ Netto)?</p>
+                                        <select
+                                            id="showAreaIvsDropdown"
+                                            required
+                                            value={showAreaIvs}
+                                            onChange={e => {
+                                                handleIVSChange(e);
+                                            }}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                        >
+                                            <option value="">-- Bitte wählen --</option>
+                                            <option value="ja">Ja</option>
+                                            <option value="nein">Nein</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Inventarisierung Zusatzfelder */}
+                                    {showAreaIvs === 'ja' && (
+                                        <>
+                                            <div>
+                                                <label htmlFor="area" className="block text-sm font-medium text-gray-900 mb-2">Bereichsnummer</label>
+                                                <select 
+                                                    id="area" 
+                                                    required 
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="ivs" className="block text-sm font-medium text-gray-900 mb-1">Inventarnummer</label>
+                                                <p className="text-sm text-gray-600 mb-2">Wie lautet die vom Haushalt vergebene Inventarnummer?</p>
+                                                <input 
+                                                    id="ivs" 
+                                                    required 
+                                                    pattern="\d+" 
+                                                    title="Nur Zahlen erlaubt"
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Geräteeigenschaften Sektion */}
+                            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <span className="bg-orange-500 text-black w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
+                                    Elektrische Prüfung
+                                </h2>
+                                <div className="space-y-6">
+                                    {/* Gerätetyp */}
+                                    <div>
+                                        <label htmlFor="deviceType" className="block text-sm font-medium text-gray-900 mb-1">Gerätetyp</label>
+                                        <p className="text-sm text-gray-600 mb-2">Vorgegebener Standardwert</p>
+                                        <select 
+                                            id="deviceType" 
+                                            disabled
+                                            className="w-full px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600"
+                                        >
+                                            <option value="Normal">Normal</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Elektrische Prüfung */}
+                                    <div>
+                                        <label htmlFor="isActive" className="block text-sm font-medium text-gray-900 mb-1">Elektrische Prüfung?</label>
+                                        <p className="text-sm text-gray-600 mb-2">Für alle ortsveränderlichen Elektrogeräte (z.B. mit Netzanschluss)</p>
+                                        <select
+                                            id="isActive"
+                                            required
+                                            onChange={e => {
+                                                if (e.target.value === 'true') {
+                                                    loadDropdown(`${MAIN_VARIABLES.SERVER_URL}/api/product-test-intervals`, 'interval', true);
+                                                }
+                                                setIsActiveValue(e.target.value);
+                                            }}
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                        />
+                                    </div>
+
+                                    {/* Elektrische Prüfung Zusatzfelder */}
+                                    {isActiveValue === 'true' && (
+                                        <>
+                                            <div>
+                                                <label htmlFor="interval" className="block text-sm font-medium text-gray-900 mb-2">Prüfintervall (Monate)</label>
+                                                <select 
+                                                    id="interval" 
+                                                    required={isActiveValue === 'true'}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="idNumber" className="block text-sm font-medium text-gray-900 mb-2">ID (Elektrische Prüfung)</label>
+                                                <input 
+                                                    id="idNumber" 
+                                                    type="text" 
+                                                    required={isActiveValue === 'true'}
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label htmlFor="lastTest" className="block text-sm font-medium text-gray-900 mb-2">Letzte elektrische Prüfung</label>
+                                                <input 
+                                                    id="lastTest" 
+                                                    type="date"
+                                                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Zusätzliche Informationen Sektion */}
+                            <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <span className="bg-orange-500 text-black w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3">4</span>
+                                    Zusätzliche Informationen
+                                </h2>
+                                <div className="space-y-6">
+                                    {/* Anmerkung */}
+                                    <div>
+                                        <label htmlFor="remark" className="block text-sm font-medium text-gray-900 mb-1">Anmerkung</label>
+                                        <p className="text-sm text-gray-600 mb-2">Für den internen Gebrauch</p>
+                                        <input 
+                                            id="remark" 
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                        />
+                                    </div>
+
+                                    {/* Produktstatus */}
+                                    <div>
+                                        <label htmlFor="status" className="block text-sm font-medium text-gray-900 mb-2">Produktstatus</label>
+                                        <select 
+                                            id="status" 
+                                            required
+                                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Submit Button */}
+                            <div className="pt-4">
+                                <Button 
+                                    type="submit"
+                                    className="bg-orange-500 hover:bg-orange-600 text-black px-6 py-3 rounded-md font-semibold transition-colors"
+                                >
+                                    Anlegen
+                                </Button>
+                            </div>
+
+                            {/* Message */}
+                            <div 
+                                id="message" 
+                                ref={messageRef}
+                                className="min-h-6 text-sm font-medium"
+                            ></div>
                         </div>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.9rem', whiteSpace: 'nowrap' }}>
-                            <input 
-                                type="checkbox" 
-                                id="priceConsidered" 
-                                checked={priceConsidered}
-                                onChange={handlePriceConsideredChange}
-                            />
-                            Preis wurde bereits berücksichtigt
-                        </label>
-                    </div>
-                    {priceConsidered && (
-                        <small style={{ color: '#666', fontStyle: 'italic', marginTop: '4px' }}>
-                            Der eingegebene Preiswert wird nicht gespeichert, da er bereits berücksichtigt wurde.
-                        </small>
-                    )}
-                </li>
-                <li>
-                    <label htmlFor="room">Raumnummer</label>
-                    <a>Wie lautet die Raumnummer, in dem das Produkt verwendet / gelagert wird?</a>
-                    <select id="room" required>
-                        <option value="">-- Bitte wählen --</option>
-                        {roomOptions.map(room => (
-                            <option key={room._id} value={room._id}>{room.name}</option>
-                        ))}
-                    </select>
-                </li>
-                <li>
-                    <label htmlFor="showAreaIvsDropdown">Inventarisierung?</label>
-                    <a>Wird das Produkt inventarisiert (Produktwert &gt; 800€ Netto)?</a>
-                    <select
-                        id="showAreaIvsDropdown"
-                        required
-                        value={showAreaIvs}
-                        onChange={e => {
-                            handleIVSChange(e);
-                        }}
-                    >
-                        <option value="">-- Bitte wählen --</option>
-                        <option value="ja">Ja</option>
-                        <option value="nein">Nein</option>
-                    </select>
-                </li>
-                {showAreaIvs === 'ja' && (
-                    <>
-                        <li>
-                            <label htmlFor="area">Bereichsnummer</label>
-                            <select id="area" required />
-                        </li>
-                        <li>
-                            <label htmlFor="ivs">Inventarnummer</label>
-                            <a>Wie lautet die vom Haushalt vergebene Inventarnummer?</a>
-                            <input id="ivs" required pattern="\d+" title="Nur Zahlen erlaubt" />
-                        </li>
-                    </>
-                )}
-                <li>
-                    <label htmlFor="deviceType">Gerätetyp</label>
-                    <a>Vorgegebener Standardwert</a>
-                    <select id="deviceType" disabled>
-                        <option value="Normal">Normal</option>
-                    </select>
-                </li>
-                <li>
-                    <label htmlFor="isActive">Elektrische Prüfung?</label>
-                    <a>Für alle ortsveränderlichen Elektrogeräte (z.B. mit Netzanschluss)</a>
-                    <select
-                        id="isActive"
-                        required
-                        onChange={e => {
-                            if (e.target.value === 'true') {
-                                loadDropdown(`${MAIN_VARIABLES.SERVER_URL}/api/product-test-intervals`, 'interval', true);
-                            }
-                            setIsActiveValue(e.target.value);
-                        }}
-                    />
-                </li>
-                {isActiveValue === 'true' && (
-                    <>
-                        <li>
-                            <label htmlFor="interval">Prüfintervall (Monate)</label>
-                            <select id="interval" required={isActiveValue === 'true'} />
-                        </li>
-                        <li>
-                            <label htmlFor="idNumber">ID (Elektrische Prüfung)</label>
-                            <input id="idNumber" type="text" required={isActiveValue === 'true'} />
-                        </li>
-                        <li>
-                            <label htmlFor="lastTest">Letzte elektrische Prüfung</label>
-                            <input id="lastTest" type="date" />
-                        </li>
-                    </>
-                )}
-                <li>
-                    <label htmlFor="remark">Anmerkung</label>
-                    <a>Für den internen Gebrauch</a>
-                    <input id="remark" />
-                </li>
-                <li>
-                    <label htmlFor="status">Produktstatus</label>
-                    <select id="status" required />
-                </li>
-                <li style={{ marginTop: 16 }}>
-                    <button type="submit">Anlegen</button>
-                </li>
-                <li>
-                    <div id="message" ref={messageRef}></div>
-                </li>
-            </ul>
-        </form>
-        {showSuccess && (
-            <div style={{
-                position: 'fixed',
-                top: 0, left: 0, right: 0, bottom: 0,
-                background: 'rgba(0,0,0,0.3)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 9999
-            }}>
-                <div style={{
-                    background: '#fff',
-                    borderRadius: 12,
-                    padding: '2rem',
-                    minWidth: 320,
-                    boxShadow: '0 2px 16px #0002',
-                    textAlign: 'center'
-                }}>
-                    <h2>Produkt erfolgreich angelegt!</h2>
-                    <div style={{ margin: '1.5rem 0' }}>
-                        Was möchten Sie als nächstes tun?
-                    </div>
-                    <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
-                        <button
-                            onClick={() => window.location.reload()}
-                            style={{
-                                background: '#646cff',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 6,
-                                padding: '0.7rem 1.2rem',
-                                fontSize: '1rem',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Neues Produkt anlegen
-                        </button>
-                        <button
-                            onClick={() => navigate('/equipment')}
-                            style={{
-                                background: '#535bf2',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: 6,
-                                padding: '0.7rem 1.2rem',
-                                fontSize: '1rem',
-                                cursor: 'pointer'
-                            }}
-                        >
-                            Zum Menü
-                        </button>
-                    </div>
+                    </form>
                 </div>
+
+                {/* Success Modal */}
+                {showSuccess && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-lg p-6 min-w-96 text-center">
+                            <h2 className="text-xl font-bold text-gray-900 mb-4">Produkt erfolgreich angelegt!</h2>
+                            <p className="text-gray-600 mb-6">Was möchten Sie als nächstes tun?</p>
+                            <div className="flex gap-4 justify-center">
+                                <Button
+                                    onClick={() => window.location.reload()}
+                                    className="bg-orange-500 hover:bg-orange-600 text-black px-4 py-2 rounded-md transition-colors"
+                                >
+                                    Neues Produkt anlegen
+                                </Button>
+                                <Button
+                                    onClick={() => navigate('/equipment')}
+                                    className="bg-black hover:bg-gray-800 text-orange-500 px-4 py-2 rounded-md transition-colors"
+                                >
+                                    Zum Menü
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-        )}
-    </>
-);
+        </div>
+    );
 }

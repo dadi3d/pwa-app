@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import "./Equipment.css";
 import { MAIN_VARIABLES } from "../config";
 import { useAuth, fetchUserData } from './services/auth';
+import { Heading, Subheading } from '../styles/catalyst/heading';
+import { Button } from '../styles/catalyst/button';
+import { Link } from '../styles/catalyst/link';
 
 
 const EquipmentManagerMenu = () => {
@@ -29,82 +31,115 @@ const EquipmentManagerMenu = () => {
     }
 
     return (
-        <div className="body">
-            <header className="header">
-                <h1 className="header-h1" id="title_">
-                    Equipment Management
-                </h1>
-            </header>
-            <main className="main">
-                {/* Sets */}
-                <section className="section">
-                    <button
-                        className="button"
+        <div className="max-w-6xl mx-auto px-4 py-8 bg-gray-50">
+            <Heading className="text-center mb-8 text-gray-900">
+                Equipment Management
+            </Heading>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {/* Sets Management */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6 transition-all duration-300 hover:shadow-lg hover:border-orange-500">
+                    <Subheading className="mb-4 flex items-center text-gray-900">
+                        <span className="w-8 h-8 bg-gray-800 text-white rounded-lg flex items-center justify-center mr-3">
+                            📦
+                        </span>
+                        Sets verwalten
+                    </Subheading>
+                    
+                    <Button 
+                        className="w-full mb-4 bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
                         onClick={() => (window.location.href = "/set-anlegen")}
                     >
                         Set hinzufügen
-                    </button>
-                    <div className="sub-items">
-                        <p className="sub-items-p">
-                            <a className="link" href="/set-bezeichnungen">
-                                Set-Bezeichnungen
-                            </a>
-                        </p>
-                        <p className="sub-items-p">
-                            <a className="link" href="/kategorien">
-                                Set-Kategorien
-                            </a>
-                        </p>
-                        <p className="sub-items-p">
-                            <a className="link" href="/sets">
-                                Set-Übersicht
-                            </a>
-                        </p>
-                        <p className="sub-items-p">
-                            <a className="link" href="/hersteller">
-                                Hersteller-Übersicht
-                            </a>
-                        </p>
+                    </Button>
+                    
+                    <div className="space-y-3">
+                        <Link 
+                            href="/set-bezeichnungen"
+                            className="block p-3 rounded-lg border border-gray-200 text-black hover:text-black transition-colors duration-200 hover:bg-gray-50 hover:border-orange-500"
+                        >
+                            Set-Bezeichnungen
+                        </Link>
+                        <Link 
+                            href="/kategorien"
+                            className="block p-3 rounded-lg border border-gray-200 text-black hover:text-black transition-colors duration-200 hover:bg-gray-50 hover:border-orange-500"
+                        >
+                            Set-Kategorien
+                        </Link>
+                        <Link 
+                            href="/sets"
+                            className="block p-3 rounded-lg border border-gray-200 text-black hover:text-black transition-colors duration-200 hover:bg-gray-50 hover:border-orange-500"
+                        >
+                            Set-Übersicht
+                        </Link>
+                        <Link 
+                            href="/hersteller"
+                            className="block p-3 rounded-lg border border-gray-200 text-black hover:text-black transition-colors duration-200 hover:bg-gray-50 hover:border-orange-500"
+                        >
+                            Hersteller-Übersicht
+                        </Link>
                     </div>
-                </section>
+                </div>
 
-                {/* Produkte */}
-                <section className="section">
-                    <button
-                        className="button"
+                {/* Produkte Management */}
+                <div className="bg-white rounded-xl border border-gray-200 p-6 transition-all duration-300 hover:shadow-lg hover:border-orange-500">
+                    <Subheading className="mb-4 flex items-center text-gray-900">
+                        <span className="w-8 h-8 bg-gray-800 text-white rounded-lg flex items-center justify-center mr-3">
+                            🔧
+                        </span>
+                        Produkte verwalten
+                    </Subheading>
+                    
+                    <Button 
+                        className="w-full mb-4 bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
                         onClick={() => (window.location.href = "/produkt-anlegen")}
                     >
                         Produkt hinzufügen
-                    </button>
-                    <div className="sub-items">
-                        <p className="sub-items-p">
-                            <a className="link" href="/produkt-kategorien">
-                                Produkt-Kategorien
-                            </a>
-                        </p>
-                        <p className="sub-items-p">
-                            <a className="link" href="/set-produkte">
-                                Produkt-Übersicht
-                            </a>
-                        </p>
-                        <p className="sub-items-p">
-                            <a className="link" href="/hersteller">
-                                Hersteller-Übersicht
-                            </a>
-                        </p>
+                    </Button>
+                    
+                    <div className="space-y-3">
+                        <Link 
+                            href="/produkt-kategorien"
+                            className="block p-3 rounded-lg border border-gray-200 text-black hover:text-black transition-colors duration-200 hover:bg-gray-50 hover:border-orange-500"
+                        >
+                            Produkt-Kategorien
+                        </Link>
+                        <Link 
+                            href="/set-produkte"
+                            className="block p-3 rounded-lg border border-gray-200 text-black hover:text-black transition-colors duration-200 hover:bg-gray-50 hover:border-orange-500"
+                        >
+                            Produkt-Übersicht
+                        </Link>
+                        <Link 
+                            href="/hersteller"
+                            className="block p-3 rounded-lg border border-gray-200 text-black hover:text-black transition-colors duration-200 hover:bg-gray-50 hover:border-orange-500"
+                        >
+                            Hersteller-Übersicht
+                        </Link>
                     </div>
-                </section>
+                </div>
 
                 {/* Dateimanager */}
-                <section className="section">
-                <button
-                    className="button"
-                    onClick={() => (window.location.href = "/file-manager")}
-                >
-                    Dateimanager öffnen
-                </button>
-            </section>
-            </main>
+                <div className="bg-white rounded-xl border border-gray-200 p-6 transition-all duration-300 hover:shadow-lg hover:border-orange-500">
+                    <Subheading className="mb-4 flex items-center text-gray-900">
+                        <span className="w-8 h-8 bg-gray-800 text-white rounded-lg flex items-center justify-center mr-3">
+                            📁
+                        </span>
+                        Dateien verwalten
+                    </Subheading>
+                    
+                    <Button 
+                        className="w-full bg-orange-500 hover:bg-orange-600 text-white border-orange-500"
+                        onClick={() => (window.location.href = "/file-manager")}
+                    >
+                        Dateimanager öffnen
+                    </Button>
+                    
+                    <p className="text-sm text-gray-600 mt-3">
+                        Verwalten Sie Bilder, Dokumente und andere Dateien für Ihre Sets und Produkte.
+                    </p>
+                </div>
+            </div>
         </div>
     );
 };

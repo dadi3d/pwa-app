@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { MAIN_VARIABLES } from "../../config";
 import { authenticatedFetch } from "../services/auth";
+import { Button } from '@headlessui/react';
+import { PlusIcon, PencilIcon, TrashIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const API_URL = `${MAIN_VARIABLES.SERVER_URL}/api/brands`;
 
@@ -91,43 +93,108 @@ const HerstellerManager = () => {
     }, []);
 
     return (
-        <div style={{ fontFamily: "sans-serif", margin: "2rem" }}>
-            <h1>Hersteller verwalten</h1>
-            <div>
-                <input
-                    value={newBrand}
-                    onChange={e => setNewBrand(e.target.value)}
-                    placeholder="Neuer Hersteller"
-                    style={{ marginRight: "1rem" }}
-                />
-                <button onClick={addBrand}>Hinzufügen</button>
-            </div>
-            {error && <div style={{ color: "red" }}>{error}</div>}
-            <div style={{ marginTop: "2rem" }}>
-                <button onClick={loadBrands}>Refresh Data</button>
-                <ul>
-                    {brands.map(({ _id, name }) => (
-                        <li key={_id}>
-                            {editId === _id ? (
-                                <>
-                                    <input
-                                        value={editName}
-                                        onChange={e => setEditName(e.target.value)}
-                                        style={{ marginRight: "0.5rem" }}
-                                    />
-                                    <button onClick={() => updateBrand(_id)}>Speichern</button>
-                                    <button onClick={() => { setEditId(null); setEditName(""); }}>Abbrechen</button>
-                                </>
-                            ) : (
-                                <>
-                                    {name}
-                                    <button style={{ marginLeft: "1rem" }} onClick={() => { setEditId(_id); setEditName(name); }}>Bearbeiten</button>
-                                    <button style={{ marginLeft: "0.5rem" }} onClick={() => deleteBrand(_id)}>Löschen</button>
-                                </>
-                            )}
-                        </li>
-                    ))}
-                </ul>
+        <div className="min-h-screen bg-gray-50 p-6">
+            <div className="max-w-4xl mx-auto">
+                {/* Header */}
+                <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-6">Hersteller verwalten</h1>
+                    
+                    {/* Add new brand form */}
+                    <div className="flex gap-3 items-center mb-4">
+                        <input
+                            value={newBrand}
+                            onChange={e => setNewBrand(e.target.value)}
+                            placeholder="Neuer Hersteller"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                        />
+                        <Button 
+                            onClick={addBrand}
+                            className="bg-orange-500 hover:bg-orange-600 text-black px-4 py-2 rounded-md flex items-center gap-2 transition-colors"
+                        >
+                            <PlusIcon className="h-5 w-5" />
+                            Hinzufügen
+                        </Button>
+                    </div>
+
+                    {/* Error message */}
+                    {error && (
+                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-4">
+                            {error}
+                        </div>
+                    )}
+
+                    {/* Refresh button */}
+                    <Button 
+                        onClick={loadBrands}
+                        className="bg-black hover:bg-gray-800 text-orange-500 px-4 py-2 rounded-md flex items-center gap-2 transition-colors"
+                    >
+                        <ArrowPathIcon className="h-5 w-5" />
+                        Refresh Data
+                    </Button>
+                </div>
+
+                {/* Brands list */}
+                <div className="bg-white rounded-lg shadow-sm">
+                    <div className="p-6">
+                        <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                            Vorhandene Hersteller ({brands.length})
+                        </h2>
+                        
+                        {brands.length === 0 ? (
+                            <p className="text-gray-500 text-center py-8">
+                                Keine Hersteller vorhanden
+                            </p>
+                        ) : (
+                            <div className="space-y-3">
+                                {brands.map(({ _id, name }) => (
+                                    <div key={_id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                                        {editId === _id ? (
+                                            <div className="flex items-center gap-3 w-full">
+                                                <input
+                                                    value={editName}
+                                                    onChange={e => setEditName(e.target.value)}
+                                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                                />
+                                                <Button 
+                                                    onClick={() => updateBrand(_id)}
+                                                    className="bg-orange-500 hover:bg-orange-600 text-black px-3 py-2 rounded-md transition-colors"
+                                                >
+                                                    Speichern
+                                                </Button>
+                                                <Button 
+                                                    onClick={() => { setEditId(null); setEditName(""); }}
+                                                    className="bg-black hover:bg-gray-800 text-orange-500 px-3 py-2 rounded-md transition-colors"
+                                                >
+                                                    Abbrechen
+                                                </Button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span className="text-lg font-medium text-gray-900">{name}</span>
+                                                <div className="flex gap-2">
+                                                    <Button 
+                                                        onClick={() => { setEditId(_id); setEditName(name); }}
+                                                        className="bg-orange-500 hover:bg-orange-600 text-black p-2 rounded-md transition-colors"
+                                                        title="Bearbeiten"
+                                                    >
+                                                        <PencilIcon className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button 
+                                                        onClick={() => deleteBrand(_id)}
+                                                        className="bg-red-500 hover:bg-red-600 text-black p-2 rounded-md transition-colors"
+                                                        title="Löschen"
+                                                    >
+                                                        <TrashIcon className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

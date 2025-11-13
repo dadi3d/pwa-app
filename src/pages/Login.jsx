@@ -105,16 +105,16 @@ export default function Login() {
       <h3 style={{ fontSize: '0.9rem', color: '#555', marginBottom: '1.5rem' }}>{version}</h3>
       <form onSubmit={handleSubmit}>
         <label style={{ display: 'block', marginBottom: 8 }}>
-          E-Mail-Adresse
+          Benutzer-ID / E-Mail
           <input
-            type="email"
+            type="text"
             value={kennung}
             onChange={e => setKennung(e.target.value)}
             style={{ width: '100%', padding: 8, marginTop: 4, marginBottom: 16 }}
             autoFocus
-            autoComplete="username email"
+            autoComplete="username"
             required
-            placeholder="Ihre E-Mail-Adresse"
+            placeholder="Ihre Benutzer-ID oder E-Mail-Adresse"
           />
         </label>
         <label style={{ display: 'block', marginBottom: 8 }}>

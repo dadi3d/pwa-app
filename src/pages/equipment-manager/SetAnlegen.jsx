@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { MAIN_VARIABLES } from "../../config";
 import { useAuth, fetchUserData, authenticatedFetch } from '../services/auth';
+import { Button } from '@headlessui/react';
+import { PlusIcon } from '@heroicons/react/24/outline';
 
 export default function SetAnlegen() {
   // Dropdown-States
@@ -266,96 +268,21 @@ export default function SetAnlegen() {
   }
 
   return (
-    <>
-      <style>
-        {`
-        .vite-form {
-          background: #fff;
-          border-radius: 12px;
-          box-shadow: 0 2px 8px #0001;
-          padding: 2rem;
-          font-family: system-ui, sans-serif;
-          margin: 2rem auto;
-          min-width: 300px;
-          max-width: 600px;
-        }
-        .vite-form ul {
-          padding: 0;
-          margin: 0;
-        }
-        .vite-form li {
-          margin-bottom: 1.2rem;
-          display: flex;
-          flex-direction: column;
-        }
-        .vite-form label {
-          font-weight: 500;
-          margin-bottom: 0.3rem;
-        }
-        .vite-form input,
-        .vite-form select,
-        .vite-form textarea {
-          padding: 0.5rem 0.7rem;
-          border: 1px solid #d0d7de;
-          border-radius: 6px;
-          font-size: 1rem;
-          background: #f6f8fa;
-          transition: border 0.2s;
-        }
-        .vite-form input:focus,
-        .vite-form select:focus,
-        .vite-form textarea:focus {
-          border-color: #646cff;
-          outline: none;
-        }
-        .vite-form button {
-          background: #646cff;
-          color: #fff;
-          border: none;
-          border-radius: 6px;
-          padding: 0.7rem 1.2rem;
-          font-size: 1rem;
-          cursor: pointer;
-          transition: background 0.2s;
-          margin-left: 0.5rem;
-        }
-        .vite-form button:hover {
-          background: #535bf2;
-        }
-        .vite-form .inline {
-          display: flex;
-          align-items: center;
-          gap: 0.7rem;
-        }
-        .vite-form .hint {
-          font-size: 0.9em;
-          color: #888;
-          margin-left: 0.3rem;
-        }
-        .vite-form .modal {
-          background: #fff;
-          border-radius: 12px;
-          box-shadow: 0 2px 16px #0002;
-          padding: 2rem;
-          min-width: 320px;
-          position: fixed;
-          top: 20%;
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 1000;
-          border: 1px solid #ccc;
-        }
-        `}
-      </style>
-      <div className="vite-form">
-        <h1 style={{ marginBottom: "1.5rem" }}>Set hinzufügen</h1>
-        <form onSubmit={createSet}>
-          <ul>
-            {/* Zugehörigkeit */}
-            <li>
-              <label>Zugehörigkeit</label>
-              <div className="inline">
-                <select value={setRelation} onChange={e => setSetRelation(e.target.value)} style={{ flex: 1 }}>
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">Set hinzufügen</h1>
+          
+          <form onSubmit={createSet}>
+            <div className="space-y-6">
+              {/* Zugehörigkeit */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Zugehörigkeit</label>
+                <select 
+                  value={setRelation} 
+                  onChange={e => setSetRelation(e.target.value)} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                >
                   <option value="">Bitte auswählen</option>
                   {setRelations.map(r => (
                     <option key={r._id} value={r._id}>
@@ -364,162 +291,209 @@ export default function SetAnlegen() {
                   ))}
                 </select>
               </div>
-            </li>
-            {/* Hersteller */}
-            <li>
-              <label>Hersteller</label>
-              <div className="inline">
-                <select value={brand} onChange={e => setBrand(e.target.value)} required style={{ flex: 1 }} >
-                  <option value="">Bitte auswählen</option>
-                  {brands.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
-                </select>
-                <button type="button" onClick={() => setShowBrandModal(true)} title="Neuen Hersteller hinzufügen">+</button>
+
+              {/* Hersteller */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Hersteller</label>
+                <div className="flex gap-2">
+                  <select 
+                    value={brand} 
+                    onChange={e => setBrand(e.target.value)} 
+                    required 
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="">Bitte auswählen</option>
+                    {brands.map(b => <option key={b._id} value={b._id}>{b.name}</option>)}
+                  </select>
+                  <Button 
+                    type="button" 
+                    onClick={() => setShowBrandModal(true)} 
+                    className="bg-orange-500 hover:bg-orange-600 text-black px-3 py-2 rounded-md transition-colors"
+                    title="Neuen Hersteller hinzufügen"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </li>
-            {/* Set-Name */}
-            <li>
-              <label>Set-Name</label>
-              <div className="inline">
-                <select value={setName} onChange={e => setSetName(e.target.value)} required style={{ flex: 1 }}>
-                  <option value="">Bitte auswählen</option>
-                  {setNames.map(s => <option key={s._id} value={s._id}>{s.name?.de}</option>)}
-                </select>
-                <button type="button" onClick={() => setShowSetNameModal(true)} title="Neue Set-Bezeichnung hinzufügen">+</button>
+
+              {/* Set-Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Set-Name</label>
+                <div className="flex gap-2">
+                  <select 
+                    value={setName} 
+                    onChange={e => setSetName(e.target.value)} 
+                    required 
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="">Bitte auswählen</option>
+                    {setNames.map(s => <option key={s._id} value={s._id}>{s.name?.de}</option>)}
+                  </select>
+                  <Button 
+                    type="button" 
+                    onClick={() => setShowSetNameModal(true)} 
+                    className="bg-orange-500 hover:bg-orange-600 text-black px-3 py-2 rounded-md transition-colors"
+                    title="Neue Set-Bezeichnung hinzufügen"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-            </li>
-            {/* Kategorie */}
-            <li>
-              <label>Set-Kategorie</label>
-              <div className="inline">
-                <select value={category} onChange={e => setCategory(e.target.value)} required style={{ flex: 1 }}>
+
+              {/* Kategorie */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Set-Kategorie</label>
+                <div className="flex gap-2">
+                  <select 
+                    value={category} 
+                    onChange={e => setCategory(e.target.value)} 
+                    required 
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                  >
+                    <option value="">Bitte auswählen</option>
+                    {categories.map(c => (
+                      <option key={c._id} value={c._id}>
+                        {c.name?.de || "–"}
+                      </option>
+                    ))}
+                  </select>
+                  <Button 
+                    type="button" 
+                    onClick={() => setShowCategoryModal(true)} 
+                    className="bg-orange-500 hover:bg-orange-600 text-black px-3 py-2 rounded-md transition-colors"
+                    title="Neue Kategorie hinzufügen"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Set-Nummer */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Set-Nummer</label>
+                <div className="flex items-center gap-2">
+                  <input 
+                    value={setNumber} 
+                    readOnly 
+                    className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-700"
+                  />
+                  <span className="text-sm text-gray-500">(automatisch vergeben)</span>
+                </div>
+              </div>
+
+              {/* Thumbnail */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Thumbnail(s)</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".jpg,.jpeg,.png"
+                    ref={thumbnailRef}
+                    onChange={e => setThumbnails(Array.from(e.target.files))}
+                    disabled={!setRelation || !brand || !setName || !category}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <span className="text-sm text-gray-500">(.jpg/.png, mehrere möglich)</span>
+                </div>
+                {/* Vorhandene Thumbnails anzeigen */}
+                {getMatchingFiles("thumbnail").length > 0 && (
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {getMatchingFiles("thumbnail").map(fd => (
+                      <img
+                        key={fd._id}
+                        src={`${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(fd.filePath)}`}
+                        alt={fd.filePath.split("/").pop()}
+                        className="w-20 h-20 object-cover rounded border border-gray-300 flex-shrink-0"
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Manual */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Manual(s)</label>
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf"
+                    ref={manualRef}
+                    onChange={e => setManuals(Array.from(e.target.files))}
+                    disabled={!setRelation || !brand || !setName || !category}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <span className="text-sm text-gray-500">(.pdf, mehrere möglich)</span>
+                </div>
+                {/* Vorhandene Manuals anzeigen */}
+                {getMatchingFiles("manual").length > 0 && (
+                  <ul className="space-y-1 text-sm text-gray-600">
+                    {getMatchingFiles("manual").map(fd => (
+                      <li key={fd._id}>
+                        <a 
+                          href={`${MAIN_VARIABLES.SERVER_URL}/${fd.filePath}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-orange-600 hover:text-orange-800 underline"
+                        >
+                          {fd.filePath.split("/").pop()}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Notizen öffentlich */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Anmerkung öffentlich</label>
+                <textarea 
+                  value={notePublic} 
+                  onChange={e => setNotePublic(e.target.value)} 
+                  rows={2} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+
+              {/* Notizen intern */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Anmerkung intern</label>
+                <textarea 
+                  value={notePrivate} 
+                  onChange={e => setNotePrivate(e.target.value)} 
+                  rows={2} 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Set-Status</label>
+                <select 
+                  value={setState} 
+                  onChange={e => setSetState(e.target.value)} 
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                >
                   <option value="">Bitte auswählen</option>
-                  {categories.map(c => (
-                    <option key={c._id} value={c._id}>
-                      {c.name?.de || "–"}
+                  {setStates.map(s => (
+                    <option key={s._id} value={s._id}>
+                      {s.name?.de || "–"}
                     </option>
                   ))}
                 </select>
-                <button type="button" onClick={() => setShowCategoryModal(true)} title="Neue Kategorie hinzufügen">+</button>
               </div>
-            </li>
-            {/* Set-Nummer */}
-            <li>
-              <label>Set-Nummer</label>
-              <div className="inline">
-                <input value={setNumber} readOnly style={{ flex: 1 }} />
-                <span className="hint">(automatisch vergeben)</span>
-              </div>
-            </li>
-            {/* Thumbnail */}
-            <li>
-              <label>Thumbnail(s)</label>
-              <div className="inline">
-                <input
-                  type="file"
-                  multiple
-                  accept=".jpg,.jpeg,.png"
-                  ref={thumbnailRef}
-                  onChange={e => setThumbnails(Array.from(e.target.files))}
-                  disabled={
-                    !setRelation || !brand || !setName || !category
-                  }
-                  style={{
-                    flex: 1,
-                    opacity: (!setRelation || !brand || !setName || !category) ? 0.5 : 1,
-                    pointerEvents: (!setRelation || !brand || !setName || !category) ? "none" : "auto"
-                  }}
-                />
-                <span className="hint">(.jpg/.png, mehrere möglich)</span>
-              </div>
-              {/* Vorhandene Thumbnails anzeigen */}
-              {getMatchingFiles("thumbnail").length > 0 && (
-                <div
-                  style={{
-                    marginTop: 8,
-                    display: "flex",
-                    gap: 12,
-                    overflowX: "auto",
-                    paddingBottom: 8,
-                  }}
+
+              {/* Verfügbarkeit */}
+              <div>
+                <label className="block text-sm font-medium text-gray-900 mb-2">Verfügbarkeit</label>
+                <select 
+                  value={setAssignment} 
+                  onChange={e => setSetAssignment(e.target.value)} 
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 >
-                  {getMatchingFiles("thumbnail").map(fd => (
-                    <img
-                      key={fd._id}
-                      src={`${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(fd.filePath)}`}
-                      alt={fd.filePath.split("/").pop()}
-                      style={{
-                        maxWidth: 80,
-                        maxHeight: 80,
-                        borderRadius: 6,
-                        border: "1px solid #ccc",
-                        flex: "0 0 auto",
-                      }}
-                    />
-                  ))}
-                </div>
-              )}
-            </li>
-            {/* Manual */}
-            <li>
-              <label>Manual(s)</label>
-              <div className="inline">
-                <input
-                  type="file"
-                  multiple
-                  accept=".pdf"
-                  ref={manualRef}
-                  onChange={e => setManuals(Array.from(e.target.files))}
-                  disabled={
-                    !setRelation || !brand || !setName || !category
-                  }
-                  style={{
-                    flex: 1,
-                    opacity: (!setRelation || !brand || !setName || !category) ? 0.5 : 1,
-                    pointerEvents: (!setRelation || !brand || !setName || !category) ? "none" : "auto"
-                  }}
-                />
-                <span className="hint">(.pdf, mehrere möglich)</span>
-              </div>
-              {/* Vorhandene Manuals anzeigen */}
-              {getMatchingFiles("manual").length > 0 && (
-                <ul style={{ marginTop: 8, fontSize: "0.95em", color: "#555" }}>
-                  {getMatchingFiles("manual").map(fd => (
-                    <li key={fd._id}>
-                      <a href={`${MAIN_VARIABLES.SERVER_URL}/${fd.filePath}`} target="_blank" rel="noopener noreferrer">
-                        {fd.filePath.split("/").pop()}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </li>
-            {/* Notizen öffentlich */}
-            <li>
-              <label>Anmerkung öffentlich</label>
-              <textarea value={notePublic} onChange={e => setNotePublic(e.target.value)} rows={2} />
-            </li>
-            {/* Notizen intern */}
-            <li>
-              <label>Anmerkung intern</label>
-              <textarea value={notePrivate} onChange={e => setNotePrivate(e.target.value)} rows={2} />
-            </li>
-            {/* Status */}
-            <li>
-              <label>Set-Status</label>
-              <select value={setState} onChange={e => setSetState(e.target.value)} required>
-                <option value="">Bitte auswählen</option>
-                {setStates.map(s => (
-                  <option key={s._id} value={s._id}>
-                    {s.name?.de || "–"}
-                  </option>
-                ))}
-              </select>
-            </li>
-            {/* Verfügbarkeit */}
-            <li>
-              <label>Verfügbarkeit</label>
-              <div className="inline">
-                <select value={setAssignment} onChange={e => setSetAssignment(e.target.value)} required style={{ flex: 1 }}>
                   <option value="">Bitte auswählen</option>
                   {setAssignments.map(a => (
                     <option key={a._id} value={a._id}>
@@ -528,66 +502,126 @@ export default function SetAnlegen() {
                   ))}
                 </select>
               </div>
-            </li>
-            <li>
-              <button type="submit" style={{ marginTop: "1rem" }}>Set anlegen</button>
-            </li>
-            <li>
-              <div style={{ color: messageColor, fontWeight: "bold", minHeight: "1.5em" }}>{message}</div>
-            </li>
-          </ul>
-        </form>
-        {/* Modals */}
-        {showBrandModal && (
-          <div className="modal">
-            <h3>Neuen Hersteller hinzufügen</h3>
-            <input type="text" value={newBrandName} onChange={e => setNewBrandName(e.target.value)} placeholder="Herstellername" />
-            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-              <button onClick={addBrand}>Speichern</button>
-              <button onClick={() => setShowBrandModal(false)} style={{ background: "#ccc", color: "#222" }}>Abbrechen</button>
+
+              {/* Submit Button */}
+              <div className="pt-4">
+                <Button 
+                  type="submit" 
+                  className="bg-orange-500 hover:bg-orange-600 text-black px-6 py-3 rounded-md font-semibold transition-colors"
+                >
+                  Set anlegen
+                </Button>
+              </div>
+
+              {/* Feedback */}
+              <div className="min-h-6">
+                {message && (
+                  <div className={`font-semibold ${messageColor === 'green' ? 'text-green-600' : messageColor === 'red' ? 'text-red-600' : 'text-gray-900'}`}>
+                    {message}
+                  </div>
+                )}
+              </div>
             </div>
-            <p style={{ marginTop: "1rem", color: "red" }}>{brandModalMessage}</p>
-          </div>
-        )}
-        {showSetNameModal && (
-          <div className="modal">
-            <h3>Neue Set-Bezeichnung hinzufügen</h3>
-            <input type="text" value={newSetName} onChange={e => setNewSetName(e.target.value)} placeholder="Set-Bezeichnung" />
-            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-              <button onClick={addSetName}>Speichern</button>
-              <button onClick={() => setShowSetNameModal(false)} style={{ background: "#ccc", color: "#222" }}>Abbrechen</button>
+          </form>
+
+          {/* Modals */}
+          {showBrandModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-lg p-6 min-w-96">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Neuen Hersteller hinzufügen</h3>
+                <input 
+                  type="text" 
+                  value={newBrandName} 
+                  onChange={e => setNewBrandName(e.target.value)} 
+                  placeholder="Herstellername" 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+                <div className="flex gap-3 mt-4">
+                  <Button onClick={addBrand} className="bg-orange-500 hover:bg-orange-600 text-black px-4 py-2 rounded-md transition-colors">
+                    Speichern
+                  </Button>
+                  <Button onClick={() => setShowBrandModal(false)} className="bg-black hover:bg-gray-800 text-orange-500 px-4 py-2 rounded-md transition-colors">
+                    Abbrechen
+                  </Button>
+                </div>
+                {brandModalMessage && <p className="mt-4 text-red-600">{brandModalMessage}</p>}
+              </div>
             </div>
-            <p style={{ marginTop: "1rem", color: "red" }}>{setNameModalMessage}</p>
-          </div>
-        )}
-        {showCategoryModal && (
-          <div className="modal">
-            <h3>Neue Kategorie hinzufügen</h3>
-            <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Kategoriename" />
-            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-              <button onClick={addCategory}>Speichern</button>
-              <button onClick={() => setShowCategoryModal(false)} style={{ background: "#ccc", color: "#222" }}>Abbrechen</button>
+          )}
+
+          {showSetNameModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-lg p-6 min-w-96">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Neue Set-Bezeichnung hinzufügen</h3>
+                <input 
+                  type="text" 
+                  value={newSetName} 
+                  onChange={e => setNewSetName(e.target.value)} 
+                  placeholder="Set-Bezeichnung" 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+                <div className="flex gap-3 mt-4">
+                  <Button onClick={addSetName} className="bg-orange-500 hover:bg-orange-600 text-black px-4 py-2 rounded-md transition-colors">
+                    Speichern
+                  </Button>
+                  <Button onClick={() => setShowSetNameModal(false)} className="bg-black hover:bg-gray-800 text-orange-500 px-4 py-2 rounded-md transition-colors">
+                    Abbrechen
+                  </Button>
+                </div>
+                {setNameModalMessage && <p className="mt-4 text-red-600">{setNameModalMessage}</p>}
+              </div>
             </div>
-            <p style={{ marginTop: "1rem", color: "red" }}>{categoryModalMessage}</p>
-          </div>
-        )}
-        {showSetAssignmentModal && (
-          <div className="modal">
-            <h3>Neue Zuordnung hinzufügen</h3>
-            <input
-              type="text"
-              value={newSetAssignmentName}
-              onChange={e => setNewSetAssignmentName(e.target.value)}
-              placeholder="Zuordnungsname"
-            />
-            <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
-              <button onClick={addSetAssignment}>Speichern</button>
-              <button onClick={() => setShowSetAssignmentModal(false)} style={{ background: "#ccc", color: "#222" }}>Abbrechen</button>
+          )}
+
+          {showCategoryModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-lg p-6 min-w-96">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Neue Kategorie hinzufügen</h3>
+                <input 
+                  type="text" 
+                  value={newCategoryName} 
+                  onChange={e => setNewCategoryName(e.target.value)} 
+                  placeholder="Kategoriename" 
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+                <div className="flex gap-3 mt-4">
+                  <Button onClick={addCategory} className="bg-orange-500 hover:bg-orange-600 text-black px-4 py-2 rounded-md transition-colors">
+                    Speichern
+                  </Button>
+                  <Button onClick={() => setShowCategoryModal(false)} className="bg-black hover:bg-gray-800 text-orange-500 px-4 py-2 rounded-md transition-colors">
+                    Abbrechen
+                  </Button>
+                </div>
+                {categoryModalMessage && <p className="mt-4 text-red-600">{categoryModalMessage}</p>}
+              </div>
             </div>
-            <p style={{ marginTop: "1rem", color: "red" }}>{setAssignmentModalMessage}</p>
-          </div>
-        )}
+          )}
+
+          {showSetAssignmentModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg shadow-lg p-6 min-w-96">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Neue Zuordnung hinzufügen</h3>
+                <input
+                  type="text"
+                  value={newSetAssignmentName}
+                  onChange={e => setNewSetAssignmentName(e.target.value)}
+                  placeholder="Zuordnungsname"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                />
+                <div className="flex gap-3 mt-4">
+                  <Button onClick={addSetAssignment} className="bg-orange-500 hover:bg-orange-600 text-black px-4 py-2 rounded-md transition-colors">
+                    Speichern
+                  </Button>
+                  <Button onClick={() => setShowSetAssignmentModal(false)} className="bg-black hover:bg-gray-800 text-orange-500 px-4 py-2 rounded-md transition-colors">
+                    Abbrechen
+                  </Button>
+                </div>
+                {setAssignmentModalMessage && <p className="mt-4 text-red-600">{setAssignmentModalMessage}</p>}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </>
+    </div>
   );
 }

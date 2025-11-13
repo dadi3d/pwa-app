@@ -19,7 +19,8 @@ export default function Nutzer() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [newUser, setNewUser] = useState({
         id: '',
-        name: '',
+        first_name: '',
+        last_name: '',
         email: '',
         password: '',
         role: 'student'
@@ -104,7 +105,8 @@ export default function Nutzer() {
                 body: JSON.stringify({
                     id: newUser.id.trim(),
                     password: newUser.password,
-                    name: newUser.name.trim() || undefined,
+                    first_name: newUser.first_name.trim() || undefined,
+                    last_name: newUser.last_name.trim() || undefined,
                     email: newUser.email.trim() || undefined,
                     role: newUser.role,
                     authMethod: 'local'
@@ -115,7 +117,8 @@ export default function Nutzer() {
                 // Benutzer zur Liste hinzufügen
                 const createdUser = {
                     id: newUser.id.trim(),
-                    name: newUser.name.trim() || null,
+                    first_name: newUser.first_name.trim() || null,
+                    last_name: newUser.last_name.trim() || null,
                     email: newUser.email.trim() || null,
                     role: newUser.role,
                     authMethod: 'local'
@@ -126,7 +129,8 @@ export default function Nutzer() {
                 setShowAddModal(false);
                 setNewUser({
                     id: '',
-                    name: '',
+                    first_name: '',
+                    last_name: '',
                     email: '',
                     password: '',
                     role: 'student'
@@ -186,12 +190,16 @@ export default function Nutzer() {
         
         const searchLower = searchTerm.toLowerCase();
         const id = (user.id || '').toString().toLowerCase();
-        const name = (user.name || '').toLowerCase();
+        const firstName = (user.first_name || '').toLowerCase();
+        const lastName = (user.last_name || '').toLowerCase();
+        const fullName = `${firstName} ${lastName}`.toLowerCase();
         const email = (user.email || '').toLowerCase();
         const role = (user.role || '').toLowerCase();
         
         return id.includes(searchLower) || 
-               name.includes(searchLower) || 
+               firstName.includes(searchLower) || 
+               lastName.includes(searchLower) ||
+               fullName.includes(searchLower) ||
                email.includes(searchLower) ||
                role.includes(searchLower);
     }).sort((a, b) => {
@@ -203,10 +211,9 @@ export default function Nutzer() {
         
         // 2. Innerhalb der Gruppen nach Nachname sortieren
         const getLastName = (user) => {
-            if (!user.name) return user.id.toLowerCase();
-            // Name-Format ist "Vorname Nachname", extrahiere Nachname
-            const nameParts = user.name.trim().split(/\s+/);
-            return nameParts[nameParts.length - 1].toLowerCase();
+            if (user.last_name) return user.last_name.toLowerCase();
+            if (user.first_name) return user.first_name.toLowerCase();
+            return user.id.toLowerCase();
         };
         
         const lastNameA = getLastName(a);
@@ -239,7 +246,7 @@ export default function Nutzer() {
                         {/* Benutzer hinzufügen Button */}
                         <button
                             onClick={() => setShowAddModal(true)}
-                            className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 shadow-sm"
+                            className="inline-flex items-center px-4 py-2 bg-orange-500 hover:bg-orange-600 text-black font-medium rounded-lg transition-colors duration-200 shadow-sm"
                         >
                             <PlusIcon className="size-4 mr-2" />
                             Benutzer hinzufügen
@@ -251,7 +258,7 @@ export default function Nutzer() {
                         <div className="flex-1 w-full">
                             <Input
                                 type="text"
-                                placeholder="Nach ID, Name, E-Mail oder Rolle suchen..."
+                                placeholder="Nach ID, Vor-/Nachname, E-Mail oder Rolle suchen..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 className="w-full"
@@ -309,7 +316,7 @@ export default function Nutzer() {
                                         <div className="flex-1 min-w-0 flex items-center">
                                             <div className="flex items-center gap-3 w-full">
                                                 <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-md flex-shrink-0">
-                                                    {user.name ? user.name.charAt(0).toUpperCase() : user.id.charAt(0).toUpperCase()}
+                                                    {user.first_name ? user.first_name.charAt(0).toUpperCase() : user.id.charAt(0).toUpperCase()}
                                                 </div>
                                                 
                                                 {/* Linke Spalte: Badge und ID */}
@@ -329,9 +336,9 @@ export default function Nutzer() {
                                                 
                                                 {/* Rechte Spalte: Name und Email */}
                                                 <div className="flex-1 min-w-0 ml-4">
-                                                    {user.name && (
+                                                    {(user.first_name || user.last_name) && (
                                                         <p className="text-sm text-gray-700 truncate">
-                                                            {user.name}
+                                                            {[user.first_name, user.last_name].filter(Boolean).join(' ')}
                                                         </p>
                                                     )}
                                                     {user.email && (
@@ -393,7 +400,8 @@ export default function Nutzer() {
                                         setShowAddModal(false);
                                         setNewUser({
                                             id: '',
-                                            name: '',
+                                            first_name: '',
+                                            last_name: '',
                                             email: '',
                                             password: '',
                                             role: 'student'
@@ -443,16 +451,31 @@ export default function Nutzer() {
                                     />
                                 </div>
 
-                                {/* Name */}
+                                {/* Vorname */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Name (optional)
+                                        Vorname (optional)
                                     </label>
                                     <Input
                                         type="text"
-                                        value={newUser.name}
-                                        onChange={(e) => setNewUser(prev => ({ ...prev, name: e.target.value }))}
-                                        placeholder="Max Mustermann"
+                                        value={newUser.first_name}
+                                        onChange={(e) => setNewUser(prev => ({ ...prev, first_name: e.target.value }))}
+                                        placeholder="Max"
+                                        className="w-full"
+                                        disabled={addModalLoading}
+                                    />
+                                </div>
+
+                                {/* Nachname */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Nachname (optional)
+                                    </label>
+                                    <Input
+                                        type="text"
+                                        value={newUser.last_name}
+                                        onChange={(e) => setNewUser(prev => ({ ...prev, last_name: e.target.value }))}
+                                        placeholder="Mustermann"
                                         className="w-full"
                                         disabled={addModalLoading}
                                     />
@@ -505,7 +528,8 @@ export default function Nutzer() {
                                         setShowAddModal(false);
                                         setNewUser({
                                             id: '',
-                                            name: '',
+                                            first_name: '',
+                                            last_name: '',
                                             email: '',
                                             password: '',
                                             role: 'student'
@@ -520,11 +544,11 @@ export default function Nutzer() {
                                 <button
                                     onClick={handleAddUser}
                                     disabled={addModalLoading || !newUser.id.trim() || !newUser.password.trim()}
-                                    className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
+                                    className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-black rounded-lg font-medium transition-colors duration-200 flex items-center justify-center"
                                 >
                                     {addModalLoading ? (
                                         <>
-                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                             </svg>
