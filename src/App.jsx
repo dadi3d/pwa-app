@@ -29,6 +29,7 @@ import AuftragEditAdmin from './pages/order-manager/AuftragEditAdmin.jsx';
 import FileManager from './pages/FileManager.jsx';
 import SetEdit from './pages/equipment-manager/SetEdit.jsx';
 import SetCopy from './pages/equipment-manager/SetKopieren.jsx';
+import Verfügbarkeiten from './pages/equipment-manager/Verfügbarkeiten.jsx';
 
 const iconStyle = { fontSize: '1.5rem', marginBottom: '0.2rem' };
 
@@ -151,6 +152,7 @@ function App() {
               <Route path="/file-manager" element={<FileManager />} />
               <Route path="/set-edit/:setId" element={<SetEdit />} />
               <Route path="/set-copy/:set" element={<SetCopy />} />
+              <Route path="/verfügbarkeiten" element={<Verfügbarkeiten />} />
             </>
           )}
         </Routes>

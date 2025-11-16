@@ -2,6 +2,14 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { MAIN_VARIABLES } from "../../config";
 import { authenticatedFetch } from "../services/auth";
+import { Button } from "../../styles/catalyst/button";
+import { Input } from "../../styles/catalyst/input";
+import { Select } from "../../styles/catalyst/select";
+import { Checkbox } from "../../styles/catalyst/checkbox";
+import { Fieldset, Legend } from "../../styles/catalyst/fieldset";
+import { Heading } from "../../styles/catalyst/heading";
+import { Text } from "../../styles/catalyst/text";
+import { Badge } from "../../styles/catalyst/badge";
 import "./SetAnlegen.css";
 
 export default function SetKopieren() {
@@ -24,6 +32,7 @@ export default function SetKopieren() {
   const [productTestIntervals, setProductTestIntervals] = useState([]);
   const [productCustomerIds, setProductCustomerIds] = useState([]);
   const [rooms, setRooms] = useState([]);
+  const [setAssignments, setSetAssignments] = useState([]);
   
   // Thumbnail States
   const [availableThumbnails, setAvailableThumbnails] = useState([]);
@@ -37,6 +46,9 @@ export default function SetKopieren() {
   const [messageColor, setMessageColor] = useState("black");
   const [showPreview, setShowPreview] = useState(true);
   const [newSetNumber, setNewSetNumber] = useState(1);
+  
+  // Set Assignment States
+  const [selectedSetAssignments, setSelectedSetAssignments] = useState([]);
 
   // Lade ursprüngliches Set und dessen Produkte
   useEffect(() => {
@@ -53,24 +65,26 @@ export default function SetKopieren() {
 
   async function loadDropdownData() {
     try {
-      const [brandsRes, categoriesRes, statesRes, statusRes, intervalsRes, customerIdsRes, roomsRes] = await Promise.all([
+      const [brandsRes, categoriesRes, statesRes, statusRes, intervalsRes, customerIdsRes, roomsRes, setAssignmentsRes] = await Promise.all([
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-states`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-status`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-test-intervals`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-customerids`),
-        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/rooms`)
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/rooms`),
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`)
       ]);
 
-      const [brandsData, categoriesData, statesData, statusData, intervalsData, customerIdsData, roomsData] = await Promise.all([
+      const [brandsData, categoriesData, statesData, statusData, intervalsData, customerIdsData, roomsData, setAssignmentsData] = await Promise.all([
         brandsRes.json(),
         categoriesRes.json(),
         statesRes.json(),
         statusRes.json(),
         intervalsRes.json(),
         customerIdsRes.json(),
-        roomsRes.json()
+        roomsRes.json(),
+        setAssignmentsRes.json()
       ]);
 
       setBrands(brandsData.sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })));
@@ -80,6 +94,7 @@ export default function SetKopieren() {
       setProductTestIntervals(intervalsData);
       setProductCustomerIds(customerIdsData);
       setRooms(roomsData.sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })));
+      setSetAssignments(setAssignmentsData.sort((a, b) => (a.name?.de || a.name || "").localeCompare(b.name?.de || b.name || "", "de", { sensitivity: "base" })));
     } catch (error) {
       console.error("Fehler beim Laden der Dropdown-Daten:", error);
       setMessage("Fehler beim Laden der Dropdown-Daten");
@@ -98,6 +113,15 @@ export default function SetKopieren() {
       }
       const setData = await setRes.json();
       setOriginalSet(setData);
+
+      // Set-Assignments initialisieren (von originalSet übernehmen)
+      if (setData.set_assignment) {
+        if (Array.isArray(setData.set_assignment)) {
+          setSelectedSetAssignments(setData.set_assignment.map(sa => sa._id || sa));
+        } else {
+          setSelectedSetAssignments([setData.set_assignment._id || setData.set_assignment]);
+        }
+      }
 
       // Thumbnails laden
       await loadThumbnails(setData);
@@ -228,6 +252,29 @@ export default function SetKopieren() {
     }, 100);
   }
 
+  // Set-Assignment Handling
+  function handleSetAssignmentChange(assignmentId) {
+    // Finde das Assignment-Objekt
+    const assignment = setAssignments.find(sa => sa._id === assignmentId);
+    
+    // Prüfe ob es "Freie Verfügbarkeit" ist (kein Assignment oder leer)
+    const isFreieVerfügbarkeit = !assignment || (assignment.name?.de === "Freie Verfügbarkeit");
+    
+    if (isFreieVerfügbarkeit) {
+      // Wenn "Freie Verfügbarkeit" ausgewählt wird, alle anderen deaktivieren
+      setSelectedSetAssignments([]);
+    } else {
+      // Normale Assignment-Logik
+      if (selectedSetAssignments.includes(assignmentId)) {
+        // Assignment entfernen
+        setSelectedSetAssignments(prev => prev.filter(id => id !== assignmentId));
+      } else {
+        // Assignment hinzufügen
+        setSelectedSetAssignments(prev => [...prev, assignmentId]);
+      }
+    }
+  }
+
   function checkProductValidation(productId) {
     const product = editableProducts.find(p => p.id === productId);
     if (!product) return;
@@ -240,7 +287,6 @@ export default function SetKopieren() {
     if (!product.Designation || product.Designation === '') errors.push('Bezeichnung auswählen');
     if (!product.CostCenter || !product.CostCenter.trim()) errors.push('Kostenstelle eingeben');
     if (!product.Department || product.Department === '') errors.push('Bereich auswählen');
-    if (!product.DeviceType || product.DeviceType === '') errors.push('Gerätetyp auswählen');
     if (!product.state || product.state === '') errors.push('Status auswählen');
     if (product.IsActive === '' || product.IsActive === null || product.IsActive === undefined) {
       errors.push('Aktiv-Status auswählen');
@@ -308,9 +354,9 @@ export default function SetKopieren() {
     const errors = [];
     const detailedErrors = [];
     
+    // Sets können auch ohne Produkte erstellt werden
     if (editableProducts.length === 0) {
-      errors.push("Es müssen mindestens ein Produkt vorhanden sein.");
-      return { errors, detailedErrors, isValid: false };
+      return { errors, detailedErrors, isValid: true };
     }
     
     editableProducts.forEach((product, index) => {
@@ -324,7 +370,6 @@ export default function SetKopieren() {
         { field: 'Designation', label: 'Bezeichnung' },
         { field: 'CostCenter', label: 'Kostenstelle' },
         { field: 'Department', label: 'Bereich' },
-        { field: 'DeviceType', label: 'Gerätetyp' },
         { field: 'state', label: 'Status' }
       ];
 
@@ -445,7 +490,6 @@ export default function SetKopieren() {
         manufacturer: originalSet.manufacturer._id,
         setName: originalSet.set_name._id,
         category: originalSet.category._id,
-        set_assignment: originalSet.set_assignment._id,
         set_number: newSetNumber,
         note_public: originalSet.note_public,
         note_private: originalSet.note_private,
@@ -453,6 +497,11 @@ export default function SetKopieren() {
         insurance_value: originalSet.insurance_value,
         set_relation: originalSet.set_relation._id
       };
+
+      // Set-Assignment nur hinzufügen wenn welche ausgewählt sind
+      if (selectedSetAssignments.length > 0) {
+        setData.set_assignment = JSON.stringify(selectedSetAssignments);
+      }
 
       // Neues Set erstellen
       const formData = new FormData();
@@ -568,7 +617,18 @@ export default function SetKopieren() {
         setMessage(`Set erstellt, aber ${errors.length} Produkt(e) konnten nicht erstellt werden:\n${errors.join('\n')}\n\nErfolgreich: ${createdProducts} von ${editableProducts.length} Produkten`);
         setMessageColor("orange");
       } else {
-        setMessage(`Set erfolgreich kopiert! Neues Set: ${originalSet.manufacturer?.name} - ${originalSet.set_name?.name?.de} - Set ${newSetNumber}. Alle ${createdProducts} Produkte erfolgreich erstellt.`);
+        const setAssignmentInfo = selectedSetAssignments.length === 0 ? 
+          "Freie Verfügbarkeit" : 
+          selectedSetAssignments.map(id => {
+            const assignment = setAssignments.find(sa => sa._id === id);
+            return assignment ? (assignment.name?.de || assignment.name) : id;
+          }).join(', ');
+        
+        if (editableProducts.length > 0) {
+          setMessage(`Set erfolgreich kopiert! Neues Set: ${originalSet.manufacturer?.name} - ${originalSet.set_name?.name?.de} - Set ${newSetNumber}. Alle ${createdProducts} Produkte erfolgreich erstellt.\n\nSet-Zuordnung: ${setAssignmentInfo}`);
+        } else {
+          setMessage(`Set erfolgreich kopiert! Neues Set: ${originalSet.manufacturer?.name} - ${originalSet.set_name?.name?.de} - Set ${newSetNumber} (ohne Produkte).\n\nSet-Zuordnung: ${setAssignmentInfo}`);
+        }
         setMessageColor("green");
       }
       
@@ -590,322 +650,197 @@ export default function SetKopieren() {
 
   if (loading) {
     return (
-      <div className="vite-form">
-        <h1>Set wird geladen...</h1>
-        <div>Lade Set-Daten und zugehörige Produkte...</div>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+          <Heading>Set wird geladen...</Heading>
+          <Text className="text-gray-600 mt-2">Lade Set-Daten und zugehörige Produkte...</Text>
+        </div>
       </div>
     );
   }
 
   if (!originalSet) {
     return (
-      <div className="vite-form">
-        <h1>Fehler</h1>
-        <div style={{ color: "red" }}>{message || "Set nicht gefunden"}</div>
-        <button onClick={() => navigate("/sets")}>Zurück zur Übersicht</button>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+          <Heading className="text-red-600">Fehler</Heading>
+          <Text className="text-red-600 mt-2">{message || "Set nicht gefunden"}</Text>
+          <Button className="mt-4" onClick={() => navigate("/sets")}>
+            Zurück zur Übersicht
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <>
-      <style>
-        {`
-          .vite-form {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px #0001;
-            padding: 2rem;
-            font-family: system-ui, sans-serif;
-            margin: 2rem auto;
-            max-width: 1400px;
-          }
-          .preview-section {
-            margin: 2rem 0;
-            padding: 1.5rem;
-            border: 2px solid #e1e8ed;
-            border-radius: 8px;
-            background: #f8f9fa;
-          }
-          .preview-title {
-            font-size: 1.3rem;
-            font-weight: bold;
-            margin-bottom: 1rem;
-            color: #2a3b4c;
-            border-bottom: 2px solid #646cff;
-            padding-bottom: 0.5rem;
-          }
-          .set-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-          }
-          .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 0.2rem;
-          }
-          .info-label {
-            font-weight: bold;
-            color: #555;
-            font-size: 0.9rem;
-          }
-          .info-value {
-            color: #2a3b4c;
-            font-size: 1rem;
-          }
-          .product-form {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            background: #fff;
-          }
-          .product-form h4 {
-            margin: 0 0 1rem 0;
-            color: #2a3b4c;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 0.5rem;
-          }
-          .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-          }
-          .form-field {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-          }
-          .form-field label {
-            font-weight: 500;
-            font-size: 0.9rem;
-            color: #555;
-          }
-          .form-field select,
-          .form-field input {
-            padding: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.9rem;
-          }
-          .form-field select:focus,
-          .form-field input:focus {
-            border-color: #646cff;
-            outline: none;
-          }
-          .required {
-            color: red;
-          }
-          .action-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-top: 2rem;
-          }
-          .btn {
-            padding: 0.8rem 1.5rem;
-            border: none;
-            border-radius: 6px;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-weight: 500;
-          }
-          .btn-primary {
-            background: #646cff;
-            color: white;
-          }
-          .btn-primary:hover:not(:disabled) {
-            background: #535bf2;
-          }
-          .btn-secondary {
-            background: #6c757d;
-            color: white;
-          }
-          .btn-secondary:hover {
-            background: #5a6268;
-          }
-          .btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-          }
-          .message {
-            text-align: center;
-            font-size: 1.1rem;
-            margin: 1rem 0;
-            padding: 1rem;
-            border-radius: 6px;
-            font-weight: 500;
-            white-space: pre-line;
-          }
-          .summary-stats {
-            display: flex;
-            justify-content: space-around;
-            margin: 1rem 0;
-            padding: 1rem;
-            background: #e8f4fd;
-            border-radius: 6px;
-          }
-          .stat-item {
-            text-align: center;
-          }
-          .stat-number {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: #646cff;
-          }
-          .stat-label {
-            font-size: 0.9rem;
-            color: #666;
-          }
-        `}
-      </style>
-
-      <div className="vite-form">
-        <h1 style={{ textAlign: "center", color: "#2a3b4c", marginBottom: "2rem" }}>
-          Set Kopieren & Bearbeiten
-        </h1>
+    <div className="max-w-7xl mx-auto px-4 py-8">
+      <Heading className="text-center mb-8">Set Kopieren & Bearbeiten</Heading>
 
         {showPreview && (
           <>
-            <div className="preview-section">
-              <div className="preview-title">📋 Neues Set</div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+              <Heading level={2} className="mb-6 pb-3 border-b-2 border-blue-500">
+                📋 Neues Set
+              </Heading>
               
-              <div className="summary-stats">
-                <div className="stat-item">
-                  <div className="stat-number">1</div>
-                  <div className="stat-label">Set wird erstellt</div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-blue-50 rounded-lg">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">1</div>
+                  <Text className="text-sm text-gray-600">Set wird erstellt</Text>
                 </div>
-                <div className="stat-item">
-                  <div className="stat-number">{editableProducts.filter(p => !p.isNew).length}</div>
-                  <div className="stat-label">Produkte kopiert</div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{editableProducts.filter(p => !p.isNew).length}</div>
+                  <Text className="text-sm text-gray-600">Produkte kopiert</Text>
                 </div>
-                <div className="stat-item">
-                  <div className="stat-number">{editableProducts.filter(p => p.isNew).length}</div>
-                  <div className="stat-label">Neue Produkte</div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{editableProducts.filter(p => p.isNew).length}</div>
+                  <Text className="text-sm text-gray-600">Neue Produkte</Text>
                 </div>
-                <div className="stat-item">
-                  <div className="stat-number">{newSetNumber}</div>
-                  <div className="stat-label">Neue Set-Nummer</div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-blue-600">{newSetNumber}</div>
+                  <Text className="text-sm text-gray-600">Neue Set-Nummer</Text>
                 </div>
               </div>
 
-              <div className="set-info">
-                <div className="info-item">
-                  <div className="info-label">Hersteller</div>
-                  <div className="info-value">{originalSet.manufacturer?.name}</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div>
+                  <Text className="font-medium text-gray-600 text-sm">Hersteller</Text>
+                  <Text className="text-gray-900">{originalSet.manufacturer?.name}</Text>
                 </div>
-                <div className="info-item">
-                  <div className="info-label">Set-Bezeichnung</div>
-                  <div className="info-value">{originalSet.set_name?.name?.de}</div>
+                <div>
+                  <Text className="font-medium text-gray-600 text-sm">Set-Bezeichnung</Text>
+                  <Text className="text-gray-900">{originalSet.set_name?.name?.de}</Text>
                 </div>
-                <div className="info-item">
-                  <div className="info-label">Set-Nummer</div>
-                  <div className="info-value">{newSetNumber}</div>
+                <div>
+                  <Text className="font-medium text-gray-600 text-sm">Set-Nummer</Text>
+                  <Text className="text-gray-900">{newSetNumber}</Text>
                 </div>
-                <div className="info-item">
-                  <div className="info-label">Kategorie</div>
-                  <div className="info-value">{originalSet.category?.name?.de}</div>
+                <div>
+                  <Text className="font-medium text-gray-600 text-sm">Kategorie</Text>
+                  <Text className="text-gray-900">{originalSet.category?.name?.de}</Text>
                 </div>
+                <div className="md:col-span-2">
+                  <Text className="font-medium text-gray-600 text-sm">Set-Zuordnung</Text>
+                  <Text className="text-gray-900">
+                    {selectedSetAssignments.length === 0 ? (
+                      <span className="italic text-gray-500">Freie Verfügbarkeit</span>
+                    ) : (
+                      selectedSetAssignments.map(assignmentId => {
+                        const assignment = setAssignments.find(sa => sa._id === assignmentId);
+                        return assignment ? (assignment.name?.de || assignment.name) : assignmentId;
+                      }).join(', ')
+                    )}
+                  </Text>
+                </div>
+              </div>
+
+              {/* Set-Assignment Auswahl */}
+              <div className="mt-6">
+                <Heading level={3} className="mb-4">🎯 Set-Zuordnung bearbeiten</Heading>
+                <Fieldset className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="mb-4">
+                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-md transition-colors ${
+                      selectedSetAssignments.length === 0 
+                        ? "bg-blue-50 border-2 border-blue-500" 
+                        : "bg-white border border-gray-300 hover:bg-gray-50"
+                    }`}>
+                      <Checkbox
+                        checked={selectedSetAssignments.length === 0}
+                        onChange={() => setSelectedSetAssignments([])}
+                      />
+                      <div className="flex-1">
+                        <Text className="font-medium">Freie Verfügbarkeit</Text>
+                        <Text className="text-sm text-gray-500">(für alle Benutzer sichtbar)</Text>
+                      </div>
+                    </label>
+                  </div>
+                  
+                  {setAssignments.length > 0 && (
+                    <div>
+                      <Text className="mb-2 font-medium text-gray-700">
+                        Oder spezifische Zuordnungen wählen:
+                      </Text>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-md bg-white">
+                        {setAssignments.map(assignment => (
+                          <label
+                            key={assignment._id}
+                            className={`flex items-center gap-2 cursor-pointer p-2 rounded-md text-sm transition-colors ${
+                              selectedSetAssignments.includes(assignment._id)
+                                ? "bg-blue-50 border border-blue-500"
+                                : "hover:bg-gray-50"
+                            }`}
+                          >
+                            <Checkbox
+                              checked={selectedSetAssignments.includes(assignment._id)}
+                              onChange={() => handleSetAssignmentChange(assignment._id)}
+                            />
+                            <Text className="text-sm">{assignment.name?.de || assignment.name}</Text>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <Text className="mt-3 text-xs text-gray-500 italic">
+                    💡 Sets mit "Freie Verfügbarkeit" sind für alle Benutzer sichtbar. 
+                    Sets mit spezifischen Zuordnungen sind nur für Benutzer mit entsprechenden Berechtigung sichtbar.
+                  </Text>
+                </Fieldset>
               </div>
 
               {/* Thumbnail-Auswahl */}
-              <div style={{ marginTop: "1.5rem" }}>
-                <h4 style={{ marginBottom: "1rem", color: "#2a3b4c" }}>📷 Thumbnail auswählen</h4>
+              <div className="mt-6">
+                <Heading level={3} className="mb-4">📷 Thumbnail auswählen</Heading>
                 {currentThumbnail && (
-                  <div style={{ 
-                    marginBottom: "1rem", 
-                    padding: "0.75rem", 
-                    background: "#e8f4fd", 
-                    borderRadius: "8px", 
-                    border: "1px solid #bee5eb",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem"
-                  }}>
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200 flex items-center gap-3">
                     <img 
                       src={`${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(currentThumbnail.filePath)}`}
                       alt="Aktuelles Thumbnail"
-                      style={{
-                        width: "40px",
-                        height: "40px",
-                        objectFit: "cover",
-                        borderRadius: "4px",
-                        border: "1px solid #ccc"
-                      }}
+                      className="w-10 h-10 object-cover rounded border border-gray-300"
                       onError={(e) => {
                         e.target.style.display = 'none';
                       }}
                     />
                     <div>
-                      <strong>Aktuelles Thumbnail:</strong> {currentThumbnail.filePath?.split('/').pop()}
+                      <Text className="font-medium">Aktuelles Thumbnail:</Text>
+                      <Text className="text-sm text-gray-600">{currentThumbnail.filePath?.split('/').pop()}</Text>
                     </div>
                   </div>
                 )}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))", gap: "1rem", maxHeight: "300px", overflowY: "auto" }}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 max-h-72 overflow-y-auto">
                   <div 
                     onClick={() => setSelectedThumbnail(null)}
-                    style={{
-                      border: selectedThumbnail === null ? "3px solid #646cff" : "2px solid #ddd",
-                      borderRadius: "8px",
-                      padding: "0.5rem",
-                      textAlign: "center",
-                      cursor: "pointer",
-                      background: "#f8f9fa",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      minHeight: "100px"
-                    }}
+                    className={`${
+                      selectedThumbnail === null ? "border-4 border-blue-500" : "border-2 border-gray-300"
+                    } rounded-lg p-2 text-center cursor-pointer bg-gray-50 flex flex-col items-center justify-center min-h-24 hover:bg-gray-100 transition-colors`}
                   >
-                    <div style={{ fontSize: "2rem", marginBottom: "0.25rem" }}>🚫</div>
-                    <div style={{ fontSize: "0.8rem", color: "#666" }}>Kein Thumbnail</div>
+                    <div className="text-2xl mb-1">🚫</div>
+                    <Text className="text-xs text-gray-600">Kein Thumbnail</Text>
                   </div>
                   {getMatchingThumbnails().map(thumbnail => (
                     <div 
                       key={thumbnail._id}
                       onClick={() => setSelectedThumbnail(thumbnail._id)}
-                      style={{
-                        border: selectedThumbnail === thumbnail._id ? "3px solid #646cff" : "2px solid #ddd",
-                        borderRadius: "8px",
-                        overflow: "hidden",
-                        cursor: "pointer",
-                        transition: "all 0.2s"
-                      }}
+                      className={`${
+                        selectedThumbnail === thumbnail._id ? "border-4 border-blue-500" : "border-2 border-gray-300"
+                      } rounded-lg overflow-hidden cursor-pointer transition-all hover:shadow-md`}
                     >
                       <img 
                         src={`${MAIN_VARIABLES.SERVER_URL}/api/file-data/by-filename/${encodeURIComponent(thumbnail.filePath)}`}
                         alt="Thumbnail"
-                        style={{
-                          width: "100%",
-                          height: "80px",
-                          objectFit: "cover"
-                        }}
+                        className="w-full h-20 object-cover"
                         onError={(e) => {
                           e.target.style.display = 'none';
                           e.target.nextSibling.style.display = 'flex';
                         }}
                       />
-                      <div style={{ 
-                        display: "none", 
-                        alignItems: "center", 
-                        justifyContent: "center", 
-                        height: "80px", 
-                        background: "#f8f9fa",
-                        fontSize: "2rem"
-                      }}>
+                      <div className="hidden items-center justify-center h-20 bg-gray-50 text-2xl">
                         📷
                       </div>
-                      <div style={{ 
-                        padding: "0.25rem", 
-                        fontSize: "0.7rem", 
-                        textAlign: "center",
-                        background: selectedThumbnail === thumbnail._id ? "#646cff" : "#fff",
-                        color: selectedThumbnail === thumbnail._id ? "white" : "#333"
-                      }}>
+                      <div className={`p-1 text-xs text-center ${
+                        selectedThumbnail === thumbnail._id ? "bg-blue-500 text-white" : "bg-white text-gray-700"
+                      }`}>
                         {thumbnail.filePath?.split('/').pop()?.substring(0, 15) || 'Thumbnail'}
                       </div>
                     </div>
@@ -914,259 +849,260 @@ export default function SetKopieren() {
               </div>
             </div>
 
-            <div className="preview-section">
-              <div className="preview-title">🔧 Produkte bearbeiten</div>
-              <div style={{ color: "#666", marginBottom: "1rem" }}>
-                Bearbeiten Sie die Produktdaten vor dem Kopieren. Felder mit <span className="required">*</span> sind Pflichtfelder.
-              </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+              <Heading level={2} className="mb-6 pb-3 border-b-2 border-blue-500">🔧 Produkte bearbeiten</Heading>
+              <Text className="text-gray-600 mb-4">
+                Bearbeiten Sie die Produktdaten vor dem Kopieren. Felder mit <span className="text-red-500">*</span> sind Pflichtfelder.
+              </Text>
               
               {/* Validation Summary */}
               {editableProducts.length > 0 && (
-                <div style={{ 
-                  background: "#f8f9fa", 
-                  border: "1px solid #dee2e6", 
-                  borderRadius: "6px", 
-                  padding: "1rem", 
-                  marginBottom: "1rem",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4 flex justify-between items-center">
                   <div>
-                    <strong>Validierungsstatus:</strong> {' '}
+                    <Text className="font-medium">Validierungsstatus: </Text>
                     {Object.values(productValidationErrors).filter(errors => errors && errors.length > 0).length > 0 ? (
-                      <span style={{ color: "#dc3545" }}>
+                      <Badge color="red" className="ml-2">
                         ⚠️ {Object.values(productValidationErrors).filter(errors => errors && errors.length > 0).length} Produkt(e) unvollständig
-                      </span>
+                      </Badge>
                     ) : (
-                      <span style={{ color: "#28a745" }}>
+                      <Badge color="green" className="ml-2">
                         ✅ Alle Produkte vollständig
-                      </span>
+                      </Badge>
                     )}
                   </div>
-                  <div style={{ fontSize: "0.9rem", color: "#666" }}>
+                  <Text className="text-sm text-gray-600">
                     {editableProducts.length} Produkt(e) gesamt
-                  </div>
+                  </Text>
                 </div>
               )}
               
-              <div style={{ marginBottom: "1.5rem", textAlign: "center" }}>
-                <button 
-                  className="btn btn-primary"
+              <div className="mb-6 text-center">
+                <Button 
+                  color="green"
                   onClick={addNewProduct}
                   type="button"
-                  style={{ 
-                    background: "#28a745",
-                    fontSize: "0.9rem",
-                    padding: "0.6rem 1.2rem"
-                  }}
                 >
                   ➕ Zusätzliches Produkt hinzufügen
-                </button>
+                </Button>
               </div>
               
               {editableProducts.map((product, index) => (
                 <div 
                   key={product.id} 
-                  className="product-form"
+                  className="border border-gray-200 rounded-lg p-6 mb-6 bg-white"
                   data-product-index={index}
                 >
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                      <h4 style={{ margin: 0 }}>
+                  <div className="flex justify-between items-center mb-4">
+                    <div className="flex items-center gap-3">
+                      <Heading level={3} className="m-0">
                         {product.isNew ? "🆕 Neues Produkt" : `Produkt ${index + 1}`}
-                      </h4>
+                      </Heading>
                       {productValidationErrors[product.id] && productValidationErrors[product.id].length > 0 ? (
-                        <span 
-                          style={{ 
-                            background: "#dc3545", 
-                            color: "white", 
-                            padding: "0.2rem 0.5rem", 
-                            borderRadius: "4px", 
-                            fontSize: "0.7rem",
-                            cursor: "help"
-                          }}
+                        <Badge 
+                          color="red"
                           title={`Fehlende Felder: ${productValidationErrors[product.id].join(', ')}`}
                         >
                           ⚠️ {productValidationErrors[product.id].length} Fehler
-                        </span>
+                        </Badge>
                       ) : (
-                        <span 
-                          style={{ 
-                            background: "#28a745", 
-                            color: "white", 
-                            padding: "0.2rem 0.5rem", 
-                            borderRadius: "4px", 
-                            fontSize: "0.7rem"
-                          }}
-                        >
+                        <Badge color="green">
                           ✅ Vollständig
-                        </span>
+                        </Badge>
                       )}
                     </div>
                     {product.isNew && (
-                      <button
-                        type="button"
+                      <Button
+                        color="red"
                         onClick={() => removeProduct(product.id)}
-                        style={{
-                          background: "#dc3545",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "4px",
-                          padding: "0.3rem 0.6rem",
-                          fontSize: "0.8rem",
-                          cursor: "pointer"
-                        }}
                         title="Produkt entfernen"
                       >
                         🗑️ Entfernen
-                      </button>
+                      </Button>
                     )}
                   </div>
                   
-                  <div className="form-grid">
-                    <div className="form-field">
-                      <label>Hersteller <span className="required">*</span></label>
-                      <select
-                        value={product.Manufacturer}
-                        onChange={(e) => updateProduct(product.id, 'Manufacturer', e.target.value)}
-                        onBlur={() => checkProductValidation(product.id)}
-                      >
-                        <option value="">-- Bitte wählen --</option>
-                        {brands.map(brand => (
-                          <option key={brand._id} value={brand._id}>{brand.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                  {/* Grundlegende Informationen Sektion */}
+                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <span className="bg-orange-500 text-black w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3">1</span>
+                      Grundlegende Informationen
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Hersteller <span className="text-red-500">*</span>
+                        </label>
+                        <Select
+                          value={product.Manufacturer}
+                          onChange={(e) => updateProduct(product.id, 'Manufacturer', e.target.value)}
+                          onBlur={() => checkProductValidation(product.id)}
+                        >
+                          <option value="">-- Bitte wählen --</option>
+                          {brands.map(brand => (
+                            <option key={brand._id} value={brand._id}>{brand.name}</option>
+                          ))}
+                        </Select>
+                      </div>
 
-                    <div className="form-field">
-                      <label>Typ <span className="required">*</span></label>
-                      <input
-                        type="text"
-                        value={product.Type}
-                        onChange={(e) => updateProduct(product.id, 'Type', e.target.value)}
-                        onBlur={() => checkProductValidation(product.id)}
-                        onKeyUp={() => checkProductValidation(product.id)}
-                        placeholder="Produkttyp"
-                      />
-                    </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Typ <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          type="text"
+                          value={product.Type}
+                          onChange={(e) => updateProduct(product.id, 'Type', e.target.value)}
+                          onBlur={() => checkProductValidation(product.id)}
+                          onKeyUp={() => checkProductValidation(product.id)}
+                          placeholder="Produkttyp"
+                        />
+                      </div>
 
-                    <div className="form-field">
-                      <label>Bezeichnung <span className="required">*</span></label>
-                      <select
-                        value={product.Designation}
-                        onChange={(e) => updateProduct(product.id, 'Designation', e.target.value)}
-                        onBlur={() => checkProductValidation(product.id)}
-                      >
-                        <option value="">-- Bitte wählen --</option>
-                        {productCategories.map(cat => (
-                          <option key={cat._id} value={cat._id}>{cat.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Bezeichnung <span className="text-red-500">*</span>
+                        </label>
+                        <Select
+                          value={product.Designation}
+                          onChange={(e) => updateProduct(product.id, 'Designation', e.target.value)}
+                          onBlur={() => checkProductValidation(product.id)}
+                        >
+                          <option value="">-- Bitte wählen --</option>
+                          {productCategories.map(cat => (
+                            <option key={cat._id} value={cat._id}>{cat.name}</option>
+                          ))}
+                        </Select>
+                      </div>
 
-                    <div className="form-field">
-                      <label>Seriennummer</label>
-                      <input
-                        type="text"
-                        value={product.SerialNumber}
-                        onChange={(e) => updateProduct(product.id, 'SerialNumber', e.target.value)}
-                        onBlur={() => checkProductValidation(product.id)}
-                        onKeyUp={() => checkProductValidation(product.id)}
-                        placeholder="Seriennummer"
-                      />
-                    </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Seriennummer</label>
+                        <Input
+                          type="text"
+                          value={product.SerialNumber}
+                          onChange={(e) => updateProduct(product.id, 'SerialNumber', e.target.value)}
+                          onBlur={() => checkProductValidation(product.id)}
+                          onKeyUp={() => checkProductValidation(product.id)}
+                          placeholder="Seriennummer"
+                        />
+                      </div>
 
-                    <div className="form-field">
-                      <label>Kostenstelle <span className="required">*</span></label>
-                      <input
-                        type="text"
-                        value={product.CostCenter}
-                        onChange={(e) => updateProduct(product.id, 'CostCenter', e.target.value)}
-                        onBlur={() => checkProductValidation(product.id)}
-                        onKeyUp={() => checkProductValidation(product.id)}
-                        placeholder="Kostenstelle"
-                      />
-                    </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Kostenstelle <span className="text-red-500">*</span>
+                        </label>
+                        <Input
+                          type="text"
+                          value={product.CostCenter}
+                          onChange={(e) => updateProduct(product.id, 'CostCenter', e.target.value)}
+                          onBlur={() => checkProductValidation(product.id)}
+                          onKeyUp={() => checkProductValidation(product.id)}
+                          placeholder="Kostenstelle"
+                        />
+                      </div>
 
-                    <div className="form-field">
-                      <label>Bereich <span className="required">*</span></label>
-                      <select
-                        value={product.Department}
-                        onChange={(e) => updateProduct(product.id, 'Department', e.target.value)}
-                        onBlur={() => checkProductValidation(product.id)}
-                      >
-                        <option value="">-- Bitte wählen --</option>
-                        {rooms.map(room => (
-                          <option key={room._id} value={room._id}>{room.name}</option>
-                        ))}
-                      </select>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Bereich <span className="text-red-500">*</span>
+                        </label>
+                        <Select
+                          value={product.Department}
+                          onChange={(e) => updateProduct(product.id, 'Department', e.target.value)}
+                          onBlur={() => checkProductValidation(product.id)}
+                        >
+                          <option value="">-- Bitte wählen --</option>
+                          {rooms.map(room => (
+                            <option key={room._id} value={room._id}>{room.name}</option>
+                          ))}
+                        </Select>
+                      </div>
                     </div>
+                  </div>
 
-                    <div className="form-field">
-                      <label>Gerätetyp <span className="required">*</span></label>
-                      <select
-                        value={product.DeviceType}
-                        onChange={(e) => updateProduct(product.id, 'DeviceType', e.target.value)}
-                        onBlur={() => checkProductValidation(product.id)}
-                      >
-                        <option value="Normal">Normal</option>
-                        <option value="Sondergerät">Sondergerät</option>
-                      </select>
+                  {/* Gerätekonfiguration Sektion */}
+                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-6">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <span className="bg-orange-500 text-black w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3">2</span>
+                      Gerätekonfiguration
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Gerätetyp</label>
+                        <p className="text-sm text-gray-600 mb-2">Vorgegebener Standardwert</p>
+                        <Select
+                          value="Normal"
+                          disabled
+                          className="bg-gray-100 text-gray-600"
+                        >
+                          <option value="Normal">Normal</option>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Status <span className="text-red-500">*</span>
+                        </label>
+                        <Select
+                          value={product.state}
+                          onChange={(e) => updateProduct(product.id, 'state', e.target.value)}
+                          onBlur={() => checkProductValidation(product.id)}
+                        >
+                          <option value="">-- Bitte wählen --</option>
+                          {productStates.map(state => (
+                            <option key={state._id} value={state._id}>{state.name}</option>
+                          ))}
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Aktiv <span className="text-red-500">*</span>
+                        </label>
+                        <Select
+                          value={product.IsActive}
+                          onChange={(e) => updateProductWithDependencies(product.id, 'IsActive', e.target.value === 'true')}
+                          onBlur={() => checkProductValidation(product.id)}
+                        >
+                          <option value="">-- Bitte wählen --</option>
+                          <option value="true">Ja</option>
+                          <option value="false">Nein</option>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">Inventarisierung?</label>
+                        <Select
+                          value={product.showInventarisierung}
+                          onChange={(e) => {
+                            updateProductWithDependencies(product.id, 'showInventarisierung', e.target.value);
+                            // CustomerID und Various_1 zurücksetzen wenn "nein" oder leer gewählt wird
+                            if (e.target.value !== 'ja') {
+                              updateProduct(product.id, 'CustomerID', '');
+                              updateProduct(product.id, 'Various_1', 0);
+                            }
+                          }}
+                          onBlur={() => checkProductValidation(product.id)}
+                        >
+                          <option value="">-- Bitte wählen --</option>
+                          <option value="ja">Ja</option>
+                          <option value="nein">Nein</option>
+                        </Select>
+                      </div>
                     </div>
+                  </div>
 
-                    <div className="form-field">
-                      <label>Status <span className="required">*</span></label>
-                      <select
-                        value={product.state}
-                        onChange={(e) => updateProduct(product.id, 'state', e.target.value)}
-                        onBlur={() => checkProductValidation(product.id)}
-                      >
-                        <option value="">-- Bitte wählen --</option>
-                        {productStates.map(state => (
-                          <option key={state._id} value={state._id}>{state.name}</option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="form-field">
-                      <label>Aktiv <span className="required">*</span></label>
-                      <select
-                        value={product.IsActive}
-                        onChange={(e) => updateProductWithDependencies(product.id, 'IsActive', e.target.value === 'true')}
-                        onBlur={() => checkProductValidation(product.id)}
-                      >
-                        <option value="">-- Bitte wählen --</option>
-                        <option value="true">Ja</option>
-                        <option value="false">Nein</option>
-                      </select>
-                    </div>
-
-                    <div className="form-field">
-                      <label>Inventarisierung?</label>
-                      <select
-                        value={product.showInventarisierung}
-                        onChange={(e) => {
-                          updateProductWithDependencies(product.id, 'showInventarisierung', e.target.value);
-                          // CustomerID und Various_1 zurücksetzen wenn "nein" oder leer gewählt wird
-                          if (e.target.value !== 'ja') {
-                            updateProduct(product.id, 'CustomerID', '');
-                            updateProduct(product.id, 'Various_1', 0);
-                          }
-                        }}
-                        onBlur={() => checkProductValidation(product.id)}
-                      >
-                        <option value="">-- Bitte wählen --</option>
-                        <option value="ja">Ja</option>
-                        <option value="nein">Nein</option>
-                      </select>
-                    </div>
-
-                    {product.IsActive && (
-                      <>
-                        <div className="form-field">
-                          <label>Prüfintervall <span className="required">*</span></label>
-                          <select
+                  {/* Elektrische Prüfung Sektion */}
+                  {product.IsActive && (
+                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-6">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <span className="bg-orange-500 text-black w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3">3</span>
+                        Elektrische Prüfung
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Prüfintervall (Monate) <span className="text-red-500">*</span>
+                          </label>
+                          <Select
                             value={product.TestingInterval}
                             onChange={(e) => updateProduct(product.id, 'TestingInterval', parseInt(e.target.value))}
                             onBlur={() => checkProductValidation(product.id)}
@@ -1175,12 +1111,14 @@ export default function SetKopieren() {
                             {productTestIntervals.map(interval => (
                               <option key={interval._id} value={interval.duration}>{interval.duration}</option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
 
-                        <div className="form-field">
-                          <label>ID <span className="required">*</span></label>
-                          <input
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            ID (Elektrische Prüfung) <span className="text-red-500">*</span>
+                          </label>
+                          <Input
                             type="text"
                             value={product.ID}
                             onChange={(e) => updateProduct(product.id, 'ID', e.target.value)}
@@ -1190,23 +1128,32 @@ export default function SetKopieren() {
                           />
                         </div>
 
-                        <div className="form-field">
-                          <label>Letztes Prüfdatum</label>
-                          <input
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">Letzte elektrische Prüfung</label>
+                          <Input
                             type="date"
                             value={product.LastTestingDate ? product.LastTestingDate.slice(0, 10) : ''}
                             onChange={(e) => updateProduct(product.id, 'LastTestingDate', e.target.value)}
                             onBlur={() => checkProductValidation(product.id)}
                           />
                         </div>
-                      </>
-                    )}
+                      </div>
+                    </div>
+                  )}
 
-                    {product.showInventarisierung === 'ja' && (
-                      <>
-                        <div className="form-field">
-                          <label>Bereichsnummer <span className="required">*</span></label>
-                          <select
+                  {/* Inventarisierung Sektion */}
+                  {product.showInventarisierung === 'ja' && (
+                    <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-6">
+                      <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <span className="bg-orange-500 text-black w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3">4</span>
+                        Inventarisierung
+                      </h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Bereichsnummer <span className="text-red-500">*</span>
+                          </label>
+                          <Select
                             value={product.CustomerID}
                             onChange={(e) => updateProductWithDependencies(product.id, 'CustomerID', e.target.value)}
                             onBlur={() => checkProductValidation(product.id)}
@@ -1217,12 +1164,14 @@ export default function SetKopieren() {
                                 {customer.area} {customer.description ? `- ${customer.description}` : ''}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         </div>
 
-                        <div className="form-field">
-                          <label>IVS-Nummer <span className="required">*</span></label>
-                          <input
+                        <div>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            IVS-Nummer <span className="text-red-500">*</span>
+                          </label>
+                          <Input
                             type="number"
                             value={product.Various_1}
                             onChange={(e) => updateProduct(product.id, 'Various_1', parseInt(e.target.value) || 0)}
@@ -1231,19 +1180,29 @@ export default function SetKopieren() {
                             placeholder="IVS-Nummer"
                           />
                         </div>
-                      </>
-                    )}
+                      </div>
+                    </div>
+                  )}
 
-                    <div className="form-field" style={{ gridColumn: '1 / -1' }}>
-                      <label>Bemerkung</label>
-                      <input
-                        type="text"
-                        value={product.Remark}
-                        onChange={(e) => updateProduct(product.id, 'Remark', e.target.value)}
-                        onBlur={() => checkProductValidation(product.id)}
-                        onKeyUp={() => checkProductValidation(product.id)}
-                        placeholder="Bemerkung"
-                      />
+                  {/* Zusätzliche Informationen Sektion */}
+                  <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <span className="bg-orange-500 text-black w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold mr-3">5</span>
+                      Zusätzliche Informationen
+                    </h2>
+                    <div className="space-y-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-900 mb-1">Anmerkung</label>
+                        <p className="text-sm text-gray-600 mb-2">Für den internen Gebrauch</p>
+                        <Input
+                          type="text"
+                          value={product.Remark}
+                          onChange={(e) => updateProduct(product.id, 'Remark', e.target.value)}
+                          onBlur={() => checkProductValidation(product.id)}
+                          onKeyUp={() => checkProductValidation(product.id)}
+                          placeholder="Anmerkung"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1253,47 +1212,43 @@ export default function SetKopieren() {
         )}
 
         {message && (
-          <div className="message" style={{ 
-            color: messageColor,
-            backgroundColor: messageColor === 'orange' ? '#fff3cd' : 
-                           messageColor === 'red' ? '#f8d7da' : 
-                           messageColor === 'green' ? '#d4edda' : 'transparent',
-            border: messageColor === 'orange' ? '1px solid #ffeaa7' : 
-                   messageColor === 'red' ? '1px solid #f5c6cb' : 
-                   messageColor === 'green' ? '1px solid #c3e6cb' : 'none'
-          }}>
+          <div className={`text-center text-lg p-4 rounded-lg font-medium whitespace-pre-line mb-6 ${
+            messageColor === 'orange' ? 'bg-yellow-50 text-yellow-800 border border-yellow-200' :
+            messageColor === 'red' ? 'bg-red-50 text-red-800 border border-red-200' :
+            messageColor === 'green' ? 'bg-green-50 text-green-800 border border-green-200' :
+            'bg-blue-50 text-blue-800 border border-blue-200'
+          }`}>
             {message}
           </div>
         )}
 
-        <div className="action-buttons">
+        <div className="flex gap-4 justify-center mt-8">
           {showPreview ? (
             <>
-              <button 
-                className="btn btn-secondary" 
+              <Button 
+                color="zinc"
                 onClick={() => navigate("/sets")}
                 disabled={copying}
               >
                 Abbrechen
-              </button>
-              <button 
-                className="btn btn-primary" 
+              </Button>
+              <Button 
+                color="blue"
                 onClick={executeCopy}
-                disabled={copying || editableProducts.length === 0}
+                disabled={copying}
               >
-                {copying ? "Kopiere..." : `Set mit ${editableProducts.length} Produkt(en) erstellen`}
-              </button>
+                {copying ? "Kopiere..." : editableProducts.length > 0 ? `Set mit ${editableProducts.length} Produkt(en) erstellen` : "Set ohne Produkte erstellen"}
+              </Button>
             </>
           ) : (
-            <button 
-              className="btn btn-primary" 
+            <Button 
+              color="blue"
               onClick={() => navigate("/sets")}
             >
               Zur Sets-Übersicht
-            </button>
+            </Button>
           )}
         </div>
       </div>
-    </>
   );
 }

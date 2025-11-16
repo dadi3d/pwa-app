@@ -22,7 +22,7 @@ export default function SetAnlegen() {
   const token = useAuth(state => state.token);
   const [category, setCategory] = useState("");
   const [setState, setSetState] = useState("");
-  const [setAssignment, setSetAssignment] = useState("");
+  const [setAssignment, setSetAssignment] = useState([]);
   const [setRelation, setSetRelation] = useState(""); // NEU
   const [setNumber, setSetNumber] = useState("");
   const [notePublic, setNotePublic] = useState("");
@@ -61,6 +61,24 @@ export default function SetAnlegen() {
   function normalizeName(name) {
     return (name || "").toLowerCase().replace(/\s+/g, "");
   }
+
+  // Set-Assignment Multi-Select Handler
+  const handleSetAssignmentChange = (assignmentId) => {
+    if (assignmentId === "") {
+      // "Freie Verfügbarkeit" selected - clear all others
+      setSetAssignment([]);
+    } else {
+      const currentAssignments = setAssignment || [];
+      
+      if (currentAssignments.includes(assignmentId)) {
+        // Remove if already selected
+        setSetAssignment(currentAssignments.filter(id => id !== assignmentId));
+      } else {
+        // Add to selection, but first remove "Freie Verfügbarkeit" (empty string)
+        setSetAssignment([...currentAssignments.filter(id => id !== ""), assignmentId]);
+      }
+    }
+  };
 
   // Files laden
   useEffect(() => {
@@ -123,7 +141,7 @@ export default function SetAnlegen() {
     setMessage("");
     setMessageColor("black");
 
-    if (!setState || !brand || !setName || !setAssignment || !category || !setRelation || !setNumber) {
+    if (!setState || !brand || !setName || !category || !setRelation || !setNumber) {
       setMessage("Bitte alle Pflichtfelder ausfüllen.");
       setMessageColor("red");
       return;
@@ -132,7 +150,9 @@ export default function SetAnlegen() {
     const formData = new FormData();
     formData.append("manufacturer", brand);
     formData.append("setName", setName);
-    formData.append("set_assignment", setAssignment);
+    if (setAssignment && setAssignment.length > 0) {
+      formData.append("set_assignment", JSON.stringify(setAssignment));
+    }
     formData.append("category", category);
     formData.append("set_number", setNumber);
     formData.append("insurance_value", null);
@@ -152,7 +172,7 @@ export default function SetAnlegen() {
     if (res.ok) {
       setMessage("Set erfolgreich angelegt.");
       setMessageColor("green");
-      setBrand(""); setSetName(""); setSetAssignment(""); setCategory(""); setSetNumber("");
+      setBrand(""); setSetName(""); setSetAssignment([]); setCategory(""); setSetNumber("");
       setNotePublic(""); setNotePrivate(""); setSetState(""); setThumbnails([]); setManuals([]); setSetRelation("");
       if (thumbnailRef.current) thumbnailRef.current.value = "";
       if (manualRef.current) manualRef.current.value = "";
@@ -488,19 +508,32 @@ export default function SetAnlegen() {
               {/* Verfügbarkeit */}
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Verfügbarkeit</label>
-                <select 
-                  value={setAssignment} 
-                  onChange={e => setSetAssignment(e.target.value)} 
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                >
-                  <option value="">Bitte auswählen</option>
+                <div className="border border-gray-300 rounded-md p-3 bg-white">
+                  <div className="mb-2">
+                    <label className="flex items-center text-sm">
+                      <input
+                        type="checkbox"
+                        checked={!setAssignment || setAssignment.length === 0}
+                        onChange={() => handleSetAssignmentChange("")}
+                        className="mr-2 h-4 w-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                      />
+                      <span className="font-medium">Freie Verfügbarkeit</span>
+                    </label>
+                  </div>
                   {setAssignments.map(a => (
-                    <option key={a._id} value={a._id}>
-                      {a.name?.de || "–"}
-                    </option>
+                    <div key={a._id} className="mb-2">
+                      <label className="flex items-center text-sm">
+                        <input
+                          type="checkbox"
+                          checked={setAssignment && setAssignment.includes(a._id)}
+                          onChange={() => handleSetAssignmentChange(a._id)}
+                          className="mr-2 h-4 w-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                        />
+                        {a.name?.de || "–"}
+                      </label>
+                    </div>
                   ))}
-                </select>
+                </div>
               </div>
 
               {/* Submit Button */}

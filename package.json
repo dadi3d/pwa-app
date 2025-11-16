@@ -1,7 +1,7 @@
 {
   "name": "medienausleihe-app",
   "private": true,
-  "version": "0.1.7p",
+  "version": "0.1.9a1",
   "type": "module",
   "scripts": {
     "dev": "vite",

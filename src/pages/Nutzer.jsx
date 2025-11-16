@@ -14,6 +14,7 @@ export default function Nutzer() {
     const [updatedUserId, setUpdatedUserId] = useState(null);
     const [searchTerm, setSearchTerm] = useState(''); // Suchbegriff
     const [selectedRole, setSelectedRole] = useState(''); // Rollenfilter
+    const [setAssignments, setSetAssignments] = useState([]); // Verfügbare Set-Assignments
 
     // Modal-States für Benutzer hinzufügen
     const [showAddModal, setShowAddModal] = useState(false);
@@ -23,7 +24,8 @@ export default function Nutzer() {
         last_name: '',
         email: '',
         password: '',
-        role: 'student'
+        role: 'student',
+        set_assignments: []
     });
     const [addModalMessage, setAddModalMessage] = useState('');
     const [addModalLoading, setAddModalLoading] = useState(false);
@@ -33,19 +35,42 @@ export default function Nutzer() {
     const token = useAuth(state => state.token);
 
     useEffect(() => {
-        const loadUsers = async () => {
+        const loadData = async () => {
             try {
-                const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`);
-                const data = await res.json();
-                setUsers(data);
+                const [usersRes, setAssignmentsRes] = await Promise.all([
+                    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`),
+                    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`)
+                        .catch(err => {
+                            console.warn('Set-Assignments konnten nicht geladen werden:', err);
+                            return { json: () => [] }; // Fallback zu leerem Array
+                        })
+                ]);
+                
+                const usersData = await usersRes.json();
+                const setAssignmentsData = await setAssignmentsRes.json();
+                
+                console.log('Geladene Nutzer:', usersData.length);
+                console.log('Geladene Set-Assignments:', setAssignmentsData.length, setAssignmentsData);
+                
+                setUsers(usersData);
+                setSetAssignments(Array.isArray(setAssignmentsData) ? setAssignmentsData : []);
                 setLoading(false);
             } catch (error) {
-                console.error('Fehler beim Laden der Nutzer:', error);
+                console.error('Fehler beim Laden der Daten:', error);
+                // Lade zumindest die Nutzer wenn möglich
+                try {
+                    const usersRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`);
+                    const usersData = await usersRes.json();
+                    setUsers(usersData);
+                    setSetAssignments([]); // Leer wenn Set-Assignments nicht laden
+                } catch (userError) {
+                    console.error('Auch das Laden der Nutzer ist fehlgeschlagen:', userError);
+                }
                 setLoading(false);
             }
         };
         
-        loadUsers();
+        loadData();
         fetchUserId();
     }, [token]);
 
@@ -76,6 +101,24 @@ export default function Nutzer() {
         }
         setUpdatedUserId(id);
         setTimeout(() => setUpdatedUserId(null), 2000);
+    };
+
+    const handleSetAssignmentsChange = async (id, newSetAssignments) => {
+        try {
+            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/${id}`, {
+                method: 'PUT',
+                body: JSON.stringify({ set_assignments: newSetAssignments }),
+            });
+            
+            if (response.ok) {
+                const updatedData = await response.json();
+                setUsers(users => users.map(u => u.id === id ? { ...u, set_assignments: updatedData.user.set_assignments } : u));
+                setUpdatedUserId(id);
+                setTimeout(() => setUpdatedUserId(null), 2000);
+            }
+        } catch (error) {
+            console.error('Fehler beim Aktualisieren der Set-Assignments:', error);
+        }
     };
 
     const handleAddUser = async () => {
@@ -109,7 +152,8 @@ export default function Nutzer() {
                     last_name: newUser.last_name.trim() || undefined,
                     email: newUser.email.trim() || undefined,
                     role: newUser.role,
-                    authMethod: 'local'
+                    authMethod: 'local',
+                    set_assignments: newUser.set_assignments || []
                 }),
             });
 
@@ -121,7 +165,9 @@ export default function Nutzer() {
                     last_name: newUser.last_name.trim() || null,
                     email: newUser.email.trim() || null,
                     role: newUser.role,
-                    authMethod: 'local'
+                    authMethod: 'local',
+                    set_assignments: newUser.set_assignments ? 
+                        newUser.set_assignments.map(id => setAssignments.find(sa => sa._id === id)).filter(Boolean) : []
                 };
                 setUsers(prev => [...prev, createdUser]);
                 
@@ -133,7 +179,8 @@ export default function Nutzer() {
                     last_name: '',
                     email: '',
                     password: '',
-                    role: 'student'
+                    role: 'student',
+                    set_assignments: []
                 });
                 setAddModalMessage('');
             } else {
@@ -308,76 +355,134 @@ export default function Nutzer() {
                         {filteredUsers.map(user => (
                             <div 
                                 key={user.id} 
-                                className="bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-xl hover:border-orange-500 transition-all duration-200 overflow-hidden h-[100px]"
+                                className="bg-white rounded-lg shadow-md border border-gray-200 hover:shadow-xl hover:border-orange-500 transition-all duration-200 overflow-hidden"
                             >
-                                <div className="p-5 h-full">
-                                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 h-full">
-                                        {/* Benutzerinformationen */}
-                                        <div className="flex-1 min-w-0 flex items-center">
-                                            <div className="flex items-center gap-3 w-full">
-                                                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-md flex-shrink-0">
-                                                    {user.first_name ? user.first_name.charAt(0).toUpperCase() : user.id.charAt(0).toUpperCase()}
-                                                </div>
-                                                
-                                                
-                                                {/* Linke Spalte: Badge und ID */}
-                                                <div className="flex-shrink-0">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        {user.authMethod === 'oth' && (
-                                                            <Badge color="blue">OTH</Badge>
+                                <div className="p-5">
+                                    <div className="flex flex-col gap-4">
+                                        {/* Obere Zeile: Benutzerinformationen und Rolle */}
+                                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                                            {/* Benutzerinformationen */}
+                                            <div className="flex-1 min-w-0 flex items-center">
+                                                <div className="flex items-center gap-3 w-full">
+                                                    <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold shadow-md flex-shrink-0">
+                                                        {user.first_name ? user.first_name.charAt(0).toUpperCase() : user.id.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    
+                                                    {/* Linke Spalte: Badge und ID */}
+                                                    <div className="flex-shrink-0">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            {user.authMethod === 'oth' && (
+                                                                <Badge color="blue">OTH</Badge>
+                                                            )}
+                                                            {user.authMethod === 'local' && (
+                                                                <Badge color="purple">LOCAL</Badge>
+                                                            )}
+                                                        </div>
+                                                        <span className="font-semibold text-gray-900 text-lg block">
+                                                            {user.id}
+                                                        </span>
+                                                    </div>
+                                                    
+                                                    {/* Rechte Spalte: Name und Email */}
+                                                    <div className="flex-1 min-w-0 ml-4">
+                                                        {(user.first_name || user.last_name) && (
+                                                            <p className="text-sm text-gray-700 truncate">
+                                                                {[user.first_name, user.last_name].filter(Boolean).join(' ')}
+                                                            </p>
                                                         )}
-                                                        {user.authMethod === 'local' && (
-                                                            <Badge color="purple">LOCAL</Badge>
+                                                        {user.email && (
+                                                            <p className="text-xs text-gray-500 truncate">
+                                                                {user.email}
+                                                            </p>
                                                         )}
                                                     </div>
-                                                    <span className="font-semibold text-gray-900 text-lg block">
-                                                        {user.id}
-                                                    </span>
-                                                </div>
-                                                
-                                                {/* Rechte Spalte: Name und Email */}
-                                                <div className="flex-1 min-w-0 ml-4">
-                                                    {(user.first_name || user.last_name) && (
-                                                        <p className="text-sm text-gray-700 truncate">
-                                                            {[user.first_name, user.last_name].filter(Boolean).join(' ')}
-                                                        </p>
-                                                    )}
-                                                    {user.email && (
-                                                        <p className="text-xs text-gray-500 truncate">
-                                                            {user.email}
-                                                        </p>
-                                                    )}
                                                 </div>
                                             </div>
+                                            
+                                            {/* Rollenauswahl und Aktionen */}
+                                            <div className="flex items-center gap-3 lg:flex-shrink-0">
+                                                <label className="text-sm font-medium text-gray-700 whitespace-nowrap hidden sm:block">
+                                                    Rolle:
+                                                </label>
+                                                <Select
+                                                    value={user.role || 'student'}
+                                                    onChange={e => handleRoleChange(user.id, e.target.value)}
+                                                    className="w-full sm:w-40"
+                                                >
+                                                    <option value="student">Student</option>
+                                                    <option value="teacher">Lehrer</option>
+                                                    <option value="admin">Admin</option>
+                                                </Select>
+                                                {updatedUserId === user.id && (
+                                                    <span className="text-green-600 text-2xl flex-shrink-0 animate-pulse">
+                                                        ✓
+                                                    </span>
+                                                )}
+                                                {/* Löschen Button */}
+                                                <button
+                                                    onClick={() => handleDeleteUser(user.id)}
+                                                    className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                                                    title="Benutzer löschen"
+                                                >
+                                                    <TrashIcon className="size-4" />
+                                                </button>
+                                            </div>
                                         </div>
-                                        
-                                        {/* Rollenauswahl und Aktionen */}
-                                        <div className="flex items-center gap-3 lg:flex-shrink-0">
-                                            <label className="text-sm font-medium text-gray-700 whitespace-nowrap hidden sm:block">
-                                                Rolle:
-                                            </label>
-                                            <Select
-                                                value={user.role || 'student'}
-                                                onChange={e => handleRoleChange(user.id, e.target.value)}
-                                                className="w-full sm:w-40"
-                                            >
-                                                <option value="student">Student</option>
-                                                <option value="teacher">Lehrer</option>
-                                                <option value="admin">Admin</option>
-                                            </Select>
-                                            {updatedUserId === user.id && (
-                                                <span className="text-green-600 text-2xl flex-shrink-0 animate-pulse">
-                                                    ✓
-                                                </span>
+
+                                        {/* Untere Zeile: Set-Assignments */}
+                                        <div className="border-t pt-3">
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                                <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                                                    Zugewiesene Sets:
+                                                </label>
+                                                <div className="flex-1">
+                                                    <Dropdown>
+                                                        <DropdownButton outline className="w-full sm:w-auto hover:border-orange-500 hover:text-orange-600 transition-colors duration-200">
+                                                            <span className="mr-2">
+                                                                {user.set_assignments && user.set_assignments.length > 0 
+                                                                    ? `${user.set_assignments.length} Set(s) zugewiesen`
+                                                                    : "Sets zuweisen"
+                                                                }
+                                                            </span>
+                                                            <ChevronDownIcon className="size-4" />
+                                                        </DropdownButton>
+                                                        <DropdownMenu className="border border-gray-200 max-h-60 overflow-y-auto">
+                                                            {setAssignments.map((assignment) => {
+                                                                const isSelected = user.set_assignments?.some(ua => ua._id === assignment._id);
+                                                                return (
+                                                                    <DropdownItem 
+                                                                        key={assignment._id}
+                                                                        onClick={() => {
+                                                                            const currentAssignments = user.set_assignments?.map(a => a._id) || [];
+                                                                            const newAssignments = isSelected 
+                                                                                ? currentAssignments.filter(id => id !== assignment._id)
+                                                                                : [...currentAssignments, assignment._id];
+                                                                            handleSetAssignmentsChange(user.id, newAssignments);
+                                                                        }}
+                                                                        className={isSelected ? "bg-blue-50 text-blue-700" : ""}
+                                                                    >
+                                                                        <div className="flex items-center justify-between w-full">
+                                                                            <span>{assignment.name?.de || assignment.name}</span>
+                                                                            {isSelected && <span className="text-blue-600">✓</span>}
+                                                                        </div>
+                                                                    </DropdownItem>
+                                                                );
+                                                            })}
+                                                        </DropdownMenu>
+                                                    </Dropdown>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Anzeige der zugewiesenen Sets */}
+                                            {user.set_assignments && user.set_assignments.length > 0 && (
+                                                <div className="mt-2 flex flex-wrap gap-1">
+                                                    {user.set_assignments.map((assignment) => (
+                                                        <Badge key={assignment._id} color="green" className="text-xs">
+                                                            {assignment.name?.de || assignment.name}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
                                             )}
-                                            {/* Löschen Button */}
-                                            <button
-                                                onClick={() => handleDeleteUser(user.id)}
-                                                className="p-2 text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                                                title="Benutzer löschen"
-                                            >
-                                                <TrashIcon className="size-4" />
-                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -405,7 +510,8 @@ export default function Nutzer() {
                                             last_name: '',
                                             email: '',
                                             password: '',
-                                            role: 'student'
+                                            role: 'student',
+                                            set_assignments: []
                                         });
                                         setAddModalMessage('');
                                     }}
@@ -497,6 +603,73 @@ export default function Nutzer() {
                                     />
                                 </div>
 
+                                {/* Set-Assignments */}
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                                        Set-Zuweisungen (optional)
+                                    </label>
+                                    <div className="space-y-2">
+                                        {/* Debug Info */}
+                                        <p className="text-xs text-gray-400">
+                                            {setAssignments.length === 0 
+                                                ? "Keine Set-Assignments verfügbar" 
+                                                : `${setAssignments.length} Set-Assignment(s) verfügbar`
+                                            }
+                                        </p>
+                                        
+                                        {setAssignments.length > 0 ? (
+                                            <div className="border border-gray-200 rounded-lg p-3 max-h-40 overflow-y-auto">
+                                                <div className="space-y-2">
+                                                    {setAssignments.map((assignment) => {
+                                                        const isSelected = newUser.set_assignments?.includes(assignment._id);
+                                                        return (
+                                                            <label 
+                                                                key={assignment._id}
+                                                                className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 p-1 rounded"
+                                                            >
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isSelected}
+                                                                    onChange={(e) => {
+                                                                        const currentAssignments = newUser.set_assignments || [];
+                                                                        const newAssignments = e.target.checked 
+                                                                            ? [...currentAssignments, assignment._id]
+                                                                            : currentAssignments.filter(id => id !== assignment._id);
+                                                                        setNewUser(prev => ({ ...prev, set_assignments: newAssignments }));
+                                                                    }}
+                                                                    disabled={addModalLoading}
+                                                                    className="text-orange-500 focus:ring-orange-500"
+                                                                />
+                                                                <span className="text-sm text-gray-700">
+                                                                    {assignment.name?.de || assignment.name}
+                                                                </span>
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-sm text-gray-500 italic border border-gray-200 rounded-lg p-3">
+                                                Keine Set-Assignments verfügbar. Bitte erstellen Sie zuerst Set-Assignments in der Equipment-Verwaltung.
+                                            </div>
+                                        )}
+                                        
+                                        {/* Anzeige der ausgewählten Sets */}
+                                        {newUser.set_assignments && newUser.set_assignments.length > 0 && (
+                                            <div className="flex flex-wrap gap-1">
+                                                {newUser.set_assignments.map((assignmentId) => {
+                                                    const assignment = setAssignments.find(sa => sa._id === assignmentId);
+                                                    return assignment ? (
+                                                        <Badge key={assignmentId} color="green" className="text-xs">
+                                                            {assignment.name?.de || assignment.name}
+                                                        </Badge>
+                                                    ) : null;
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
                                 {/* Rolle */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -533,7 +706,8 @@ export default function Nutzer() {
                                             last_name: '',
                                             email: '',
                                             password: '',
-                                            role: 'student'
+                                            role: 'student',
+                                            set_assignments: []
                                         });
                                         setAddModalMessage('');
                                     }}

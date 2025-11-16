@@ -61,7 +61,7 @@ const SetEdit = ({ setId: propSetId }) => {
       .then(setFileDatas);
   }, []);
 
-  useEffect(() => {
+    useEffect(() => {
     if (!setId) return;
     // Set-Daten laden
     authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`)
@@ -73,7 +73,11 @@ const SetEdit = ({ setId: propSetId }) => {
             set_name: data.set_name?._id || data.set_name,
             category: data.category?._id || data.category,
             state: data.state?._id || data.state,
-            set_assignment: data.set_assignment?._id || data.set_assignment,
+            set_assignment: Array.isArray(data.set_assignment) 
+                ? data.set_assignment.map(sa => sa._id || sa)
+                : (data.set_assignment?._id || data.set_assignment) 
+                    ? [data.set_assignment?._id || data.set_assignment] 
+                    : [],
             set_relation: data.set_relation?._id || data.set_relation,
         });
         setLoading(false);
@@ -82,9 +86,7 @@ const SetEdit = ({ setId: propSetId }) => {
     authenticatedFetch(`${API_SINGLE_PRODUCTS}?set=${setId}`)
         .then(res => res.json())
         .then(setProducts);
-    }, [setId]);
-
-  // Bild-URLs generieren, wenn sich fileDatas ändern
+    }, [setId]);  // Bild-URLs generieren, wenn sich fileDatas ändern
   useEffect(() => {
     const urls = {};
     for (const fd of fileDatas) {
@@ -184,12 +186,33 @@ async function handleSetThumbnail(fileId) {
     inputRef.current.value = "";
   }
 
-  const handleChange = (e) => {
+    const handleChange = (e) => {
         const { name, value } = e.target;
         setSetData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSave = async (e) => {
+    const handleSetAssignmentChange = (assignmentId) => {
+        setSetData(prev => {
+            let newAssignments;
+            
+            if (assignmentId === "") {
+                // "Freie Verfügbarkeit" selected - clear all others
+                newAssignments = [];
+            } else {
+                const currentAssignments = prev.set_assignment || [];
+                
+                if (currentAssignments.includes(assignmentId)) {
+                    // Remove if already selected
+                    newAssignments = currentAssignments.filter(id => id !== assignmentId);
+                } else {
+                    // Add to selection, but first remove "Freie Verfügbarkeit" (empty string)
+                    newAssignments = [...currentAssignments.filter(id => id !== ""), assignmentId];
+                }
+            }
+            
+            return { ...prev, set_assignment: newAssignments };
+        });
+    };    const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
 
@@ -204,8 +227,9 @@ async function handleSetThumbnail(fileId) {
     formData.append("state", setData.state);
     formData.append("insurance_value", setData.insurance_value || 0);
     // Nur hinzufügen wenn gültige Werte vorhanden sind
-    if (setData.set_assignment && setData.set_assignment !== 'null') {
-      formData.append("set_assignment", setData.set_assignment);
+    if (setData.set_assignment && setData.set_assignment.length > 0) {
+      // Send as JSON string for array handling
+      formData.append("set_assignment", JSON.stringify(setData.set_assignment));
     }
     if (setData.set_relation && setData.set_relation !== 'null') {
       formData.append("set_relation", setData.set_relation);
@@ -241,7 +265,11 @@ async function handleSetThumbnail(fileId) {
             set_name: data.set_name?._id || data.set_name,
             category: data.category?._id || data.category,
             state: data.state?._id || data.state,
-            set_assignment: data.set_assignment?._id || data.set_assignment,
+            set_assignment: Array.isArray(data.set_assignment) 
+                ? data.set_assignment.map(sa => sa._id || sa)
+                : (data.set_assignment?._id || data.set_assignment) 
+                    ? [data.set_assignment?._id || data.set_assignment] 
+                    : [],
             set_relation: data.set_relation?._id || data.set_relation,
         });
         });
@@ -314,7 +342,14 @@ async function handleSetThumbnail(fileId) {
             <strong>Private Notiz:</strong> {setData.note_private || "–"}
           </div>
           <div style={{ marginBottom: 12 }}>
-            <strong>Set-Zuordnung:</strong> {assignments.find(a => a._id === setData.set_assignment)?.name?.de || assignments.find(a => a._id === setData.set_assignment)?.name || "–"}
+            <strong>Set-Zuordnung:</strong> {
+              !setData.set_assignment || setData.set_assignment.length === 0 
+                ? "Freie Verfügbarkeit"
+                : setData.set_assignment.map(saId => 
+                    assignments.find(a => a._id === saId)?.name?.de || 
+                    assignments.find(a => a._id === saId)?.name || saId
+                  ).join(", ")
+            }
           </div>
           <div style={{ marginBottom: 12 }}>
             <strong>Zugehörigkeit:</strong> {relations.find(r => r._id === setData.set_relation)?.name?.de || relations.find(r => r._id === setData.set_relation)?.name || "–"}
@@ -514,12 +549,32 @@ async function handleSetThumbnail(fileId) {
             </label>
             <label>
               Set-Zuordnung:
-              <select name="set_assignment" value={setData.set_assignment} onChange={handleChange}>
-                <option value="">Bitte wählen</option>
+              <div style={{ border: "1px solid #ccc", borderRadius: 4, padding: 8, marginTop: 4 }}>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ display: "flex", alignItems: "center", fontSize: "0.9em" }}>
+                    <input
+                      type="checkbox"
+                      checked={!setData.set_assignment || setData.set_assignment.length === 0}
+                      onChange={() => handleSetAssignmentChange("")}
+                      style={{ marginRight: 8 }}
+                    />
+                    Freie Verfügbarkeit
+                  </label>
+                </div>
                 {assignments.map(a => (
-                  <option key={a._id} value={a._id}>{a.name?.de || a.name}</option>
+                  <div key={a._id} style={{ marginBottom: 8 }}>
+                    <label style={{ display: "flex", alignItems: "center", fontSize: "0.9em" }}>
+                      <input
+                        type="checkbox"
+                        checked={setData.set_assignment && setData.set_assignment.includes(a._id)}
+                        onChange={() => handleSetAssignmentChange(a._id)}
+                        style={{ marginRight: 8 }}
+                      />
+                      {a.name?.de || a.name}
+                    </label>
+                  </div>
                 ))}
-              </select>
+              </div>
             </label>
             <label>
               Zugehörigkeit:

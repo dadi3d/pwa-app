@@ -33,6 +33,7 @@ export default function Produkte() {
 
   const [userId, setUserId] = useState('');
   const [userRole, setUserRole] = useState('student');
+  const [userSetAssignments, setUserSetAssignments] = useState([]); // Set-Assignments des angemeldeten Benutzers
   const token = useAuth(state => state.token);
 
   // Sets laden
@@ -41,6 +42,7 @@ export default function Produkte() {
       // Verwende die neue Route für verfügbare Sets (ohne Status "nicht verfügbar")
       const res = await authenticatedFetch(API_SETS_AVAILABLE);
       const data = await res.json();
+      
       // Alle Sets für Set-Anzahl-Berechnung speichern
       setAllSets(data);
       // Nur Sets mit Nummer 1 für die Anzeige filtern
@@ -71,7 +73,7 @@ export default function Produkte() {
     fetchUserId();
   }, [token]);
 
-  // Benutzer-ID aus JWT holen
+  // Benutzer-ID und Set-Assignments aus JWT holen
   async function fetchUserId() {
     try {
       const userData = await fetchUserData();
@@ -80,9 +82,23 @@ export default function Produkte() {
         if(userData.role) {
           setUserRole(userData.role);
         }
+        
+        // Lade die vollständigen Benutzerdaten mit Set-Assignments
+        const userResponse = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`);
+        const allUsers = await userResponse.json();
+        const currentUser = allUsers.find(user => user.id === userData.id);
+        
+        if (currentUser && currentUser.set_assignments) {
+          console.log('User Set-Assignments:', currentUser.set_assignments);
+          setUserSetAssignments(currentUser.set_assignments || []);
+        } else {
+          setUserSetAssignments([]);
+        }
       }
     } catch (err) {
+      console.error('Fehler beim Laden der Benutzerdaten:', err);
       setUserId('');
+      setUserSetAssignments([]);
     }
   }
 
@@ -255,8 +271,40 @@ export default function Produkte() {
     }
   };
 
-  // Gefilterte Sets basierend auf Suchbegriff und Kategorie (nicht Verfügbarkeit)
+  // Gefilterte Sets basierend auf Suchbegriff, Kategorie und User-Set-Assignments
   const filteredSets = sets.filter((set) => {
+    // Set-Assignment-Filter: 
+    // Sets ohne set_assignment (null/undefined/leere Liste) sind IMMER für alle sichtbar
+    const hasNoAssignment = !set.set_assignment || 
+                           (Array.isArray(set.set_assignment) && set.set_assignment.length === 0) ||
+                           (typeof set.set_assignment === 'object' && Object.keys(set.set_assignment).length === 0);
+    
+    if (hasNoAssignment) {
+      // Kein Filter für Sets ohne Assignment oder mit leerer Assignment - immer anzeigen
+    } else {
+      // Sets mit set_assignment: Prüfe ob User die entsprechenden Assignments hat
+      if (userSetAssignments.length > 0) {
+        const userAssignmentIds = userSetAssignments.map(assignment => assignment._id);
+        
+        // set_assignment ist jetzt ein Array - prüfe Überschneidung
+        const setAssignmentIds = Array.isArray(set.set_assignment) 
+          ? set.set_assignment.map(sa => sa._id || sa)
+          : [set.set_assignment._id || set.set_assignment];
+        
+        // Prüfe ob mindestens eine Set-Assignment mit User-Assignments übereinstimmt
+        const hasMatchingAssignment = setAssignmentIds.some(saId => 
+          userAssignmentIds.includes(saId)
+        );
+        
+        if (!hasMatchingAssignment) {
+          return false;
+        }
+      } else {
+        // Benutzer hat keine Set-Assignments, aber Set hat Assignment(s) -> nicht anzeigen
+        return false;
+      }
+    }
+    
     // Kategorie-Filter
     if (selectedCategory && set.category?.name?.de !== selectedCategory) {
       return false;
@@ -288,6 +336,8 @@ export default function Produkte() {
     <>
       <h1 className="text-center text-3xl font-semibold text-gray-800 mb-8">Equipment</h1>
       
+
+
       {/* Filter und Suchbereich */}
       <div className="max-w-4xl mx-auto mb-8 px-4">
         <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center mb-4">
@@ -412,16 +462,22 @@ export default function Produkte() {
       
 
       <div id="setList" className="flex flex-wrap gap-6 justify-center">
-        {filteredSets.length === 0 && searchTerm && (
-          <div className="text-gray-500 text-lg">Keine Sets für "{searchTerm}" gefunden.</div>
-        )}
-        {filteredSets.length === 0 && !searchTerm && selectedDateRange.start && selectedDateRange.end && (
-          <div className="text-gray-500 text-lg">
-            Keine Sets im ausgewählten Zeitraum ({new Date(selectedDateRange.start).toLocaleDateString('de-DE')} - {new Date(selectedDateRange.end).toLocaleDateString('de-DE')}) verfügbar.
+        {filteredSets.length === 0 && userSetAssignments.length === 0 && (
+          <div className="text-center text-gray-500 text-lg max-w-md">
+            <p className="mb-2">Keine Equipment-Bereiche zugewiesen.</p>
+            <p className="text-sm">Sie sehen nur allgemeines Equipment ohne spezielle Zuordnung.</p>
           </div>
         )}
-        {filteredSets.length === 0 && !searchTerm && !selectedDateRange.start && (
-          <div className="text-gray-500 text-lg">Keine Sets gefunden.</div>
+        {filteredSets.length === 0 && searchTerm && userSetAssignments.length > 0 && (
+          <div className="text-gray-500 text-lg">Keine Sets für "{searchTerm}" in Ihren zugewiesenen Bereichen gefunden.</div>
+        )}
+        {filteredSets.length === 0 && !searchTerm && selectedDateRange.start && selectedDateRange.end && userSetAssignments.length > 0 && (
+          <div className="text-gray-500 text-lg">
+            Keine Sets im ausgewählten Zeitraum ({new Date(selectedDateRange.start).toLocaleDateString('de-DE')} - {new Date(selectedDateRange.end).toLocaleDateString('de-DE')}) in Ihren zugewiesenen Bereichen verfügbar.
+          </div>
+        )}
+        {filteredSets.length === 0 && !searchTerm && !selectedDateRange.start && userSetAssignments.length > 0 && (
+          <div className="text-gray-500 text-lg">Keine Sets in Ihren zugewiesenen Bereichen gefunden.</div>
         )}
         {filteredSets.map((p) => {
           const brand = p.manufacturer?.name || "–";
@@ -482,6 +538,30 @@ export default function Produkte() {
                 <span>
                   {brand} <span className="text-gray-900 ">{setName}</span>
                 </span>
+                
+                {/* Set-Assignment Tags */}
+                {p.set_assignment && Array.isArray(p.set_assignment) && p.set_assignment.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {p.set_assignment.map((assignment) => {
+                      // Prüfe ob der User diese Assignment hat
+                      const userHasAssignment = userSetAssignments.some(userAssignment => 
+                        userAssignment._id === (assignment._id || assignment)
+                      );
+                      
+                      if (userHasAssignment) {
+                        return (
+                          <span 
+                            key={assignment._id || assignment} 
+                            className="inline-block bg-orange-100 text-orange-800 text-xs px-2 py-1 rounded-full border border-orange-300 font-medium"
+                          >
+                            {assignment.name?.de || assignment.name || assignment}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
               </div>
               <div className="p-3 bg-gray-50 text-gray-800 text-sm group-hover:bg-gray-100">
                 <div className="mb-1">
