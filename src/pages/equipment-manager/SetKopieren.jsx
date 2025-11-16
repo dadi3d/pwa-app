@@ -114,7 +114,7 @@ export default function SetKopieren() {
       const setData = await setRes.json();
       setOriginalSet(setData);
 
-      // Set-Assignments initialisieren (von originalSet übernehmen)
+      // Set-Gruppen initialisieren (von originalSet übernehmen)
       if (setData.set_assignment) {
         if (Array.isArray(setData.set_assignment)) {
           setSelectedSetAssignments(setData.set_assignment.map(sa => sa._id || sa));
@@ -252,7 +252,7 @@ export default function SetKopieren() {
     }, 100);
   }
 
-  // Set-Assignment Handling
+  // Set-Gruppen Handling
   function handleSetAssignmentChange(assignmentId) {
     // Finde das Assignment-Objekt
     const assignment = setAssignments.find(sa => sa._id === assignmentId);
@@ -498,7 +498,7 @@ export default function SetKopieren() {
         set_relation: originalSet.set_relation._id
       };
 
-      // Set-Assignment nur hinzufügen wenn welche ausgewählt sind
+      // Set-Gruppen nur hinzufügen wenn welche ausgewählt sind
       if (selectedSetAssignments.length > 0) {
         setData.set_assignment = JSON.stringify(selectedSetAssignments);
       }
@@ -735,7 +735,7 @@ export default function SetKopieren() {
                 </div>
               </div>
 
-              {/* Set-Assignment Auswahl */}
+              {/* Set-Gruppen Auswahl */}
               <div className="mt-6">
                 <Heading level={3} className="mb-4">🎯 Set-Zuordnung bearbeiten</Heading>
                 <Fieldset className="p-4 bg-gray-50 rounded-lg border border-gray-200">

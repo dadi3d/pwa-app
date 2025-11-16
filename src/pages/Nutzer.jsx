@@ -14,7 +14,7 @@ export default function Nutzer() {
     const [updatedUserId, setUpdatedUserId] = useState(null);
     const [searchTerm, setSearchTerm] = useState(''); // Suchbegriff
     const [selectedRole, setSelectedRole] = useState(''); // Rollenfilter
-    const [setAssignments, setSetAssignments] = useState([]); // Verfügbare Set-Assignments
+    const [setAssignments, setSetAssignments] = useState([]); // Verfügbare Set-Gruppen
 
     // Modal-States für Benutzer hinzufügen
     const [showAddModal, setShowAddModal] = useState(false);
@@ -41,7 +41,7 @@ export default function Nutzer() {
                     authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`),
                     authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`)
                         .catch(err => {
-                            console.warn('Set-Assignments konnten nicht geladen werden:', err);
+                            console.warn('Set-Gruppen konnten nicht geladen werden:', err);
                             return { json: () => [] }; // Fallback zu leerem Array
                         })
                 ]);
@@ -50,7 +50,7 @@ export default function Nutzer() {
                 const setAssignmentsData = await setAssignmentsRes.json();
                 
                 console.log('Geladene Nutzer:', usersData.length);
-                console.log('Geladene Set-Assignments:', setAssignmentsData.length, setAssignmentsData);
+                console.log('Geladene Set-Gruppen:', setAssignmentsData.length, setAssignmentsData);
                 
                 setUsers(usersData);
                 setSetAssignments(Array.isArray(setAssignmentsData) ? setAssignmentsData : []);
@@ -62,7 +62,7 @@ export default function Nutzer() {
                     const usersRes = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`);
                     const usersData = await usersRes.json();
                     setUsers(usersData);
-                    setSetAssignments([]); // Leer wenn Set-Assignments nicht laden
+                    setSetAssignments([]); // Leer wenn Set-Gruppen nicht laden
                 } catch (userError) {
                     console.error('Auch das Laden der Nutzer ist fehlgeschlagen:', userError);
                 }
@@ -117,7 +117,7 @@ export default function Nutzer() {
                 setTimeout(() => setUpdatedUserId(null), 2000);
             }
         } catch (error) {
-            console.error('Fehler beim Aktualisieren der Set-Assignments:', error);
+            console.error('Fehler beim Aktualisieren der Set-Gruppen:', error);
         }
     };
 
@@ -429,19 +429,19 @@ export default function Nutzer() {
                                             </div>
                                         </div>
 
-                                        {/* Untere Zeile: Set-Assignments */}
+                                        {/* Untere Zeile: Set-Gruppen */}
                                         <div className="border-t pt-3">
                                             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                                                    Zugewiesene Sets:
+                                                    Zugewiesene Set-Gruppen:
                                                 </label>
                                                 <div className="flex-1">
                                                     <Dropdown>
                                                         <DropdownButton outline className="w-full sm:w-auto hover:border-orange-500 hover:text-orange-600 transition-colors duration-200">
                                                             <span className="mr-2">
                                                                 {user.set_assignments && user.set_assignments.length > 0 
-                                                                    ? `${user.set_assignments.length} Set(s) zugewiesen`
-                                                                    : "Sets zuweisen"
+                                                                    ? `${user.set_assignments.length} Set-Gruppe(n) zugewiesen`
+                                                                    : "Set-Gruppen zuweisen"
                                                                 }
                                                             </span>
                                                             <ChevronDownIcon className="size-4" />
@@ -473,7 +473,7 @@ export default function Nutzer() {
                                                 </div>
                                             </div>
                                             
-                                            {/* Anzeige der zugewiesenen Sets */}
+                                            {/* Anzeige der zugewiesenen Set-Gruppen */}
                                             {user.set_assignments && user.set_assignments.length > 0 && (
                                                 <div className="mt-2 flex flex-wrap gap-1">
                                                     {user.set_assignments.map((assignment) => (
@@ -603,17 +603,17 @@ export default function Nutzer() {
                                     />
                                 </div>
 
-                                {/* Set-Assignments */}
+                                {/* Set-Gruppen */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                                        Set-Zuweisungen (optional)
+                                        Set-Gruppen Zuweisung (optional)
                                     </label>
                                     <div className="space-y-2">
                                         {/* Debug Info */}
                                         <p className="text-xs text-gray-400">
                                             {setAssignments.length === 0 
-                                                ? "Keine Set-Assignments verfügbar" 
-                                                : `${setAssignments.length} Set-Assignment(s) verfügbar`
+                                                ? "Keine Set-Gruppen verfügbar" 
+                                                : `${setAssignments.length} Set-Gruppe(n) verfügbar`
                                             }
                                         </p>
                                         
@@ -650,7 +650,7 @@ export default function Nutzer() {
                                             </div>
                                         ) : (
                                             <div className="text-sm text-gray-500 italic border border-gray-200 rounded-lg p-3">
-                                                Keine Set-Assignments verfügbar. Bitte erstellen Sie zuerst Set-Assignments in der Equipment-Verwaltung.
+                                                Keine Set-Gruppen verfügbar. Bitte erstellen Sie zuerst Set-Gruppen in der Equipment-Verwaltung.
                                             </div>
                                         )}
                                         

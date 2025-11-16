@@ -62,7 +62,7 @@ export default function SetAnlegen() {
     return (name || "").toLowerCase().replace(/\s+/g, "");
   }
 
-  // Set-Assignment Multi-Select Handler
+  // Set-Gruppen Multi-Select Handler
   const handleSetAssignmentChange = (assignmentId) => {
     if (assignmentId === "") {
       // "Freie Verfügbarkeit" selected - clear all others
@@ -268,7 +268,7 @@ export default function SetAnlegen() {
       return;
     }
     if (setAssignments.some(a => normalizeName(a.name?.de) === normalizeName(newSetAssignmentName))) {
-      setSetAssignmentModalMessage("Zuordnung existiert bereits.");
+      setSetAssignmentModalMessage("Set-Gruppe existiert bereits.");
       return;
     }
     const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`, {
@@ -280,8 +280,10 @@ export default function SetAnlegen() {
       return;
     }
     const newAssignment = await res.json();
-    setSetAssignments([...setAssignments, newAssignment]);
-    setSetAssignment(newAssignment._id);
+    const sortedAssignments = [...setAssignments, newAssignment].sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }));
+    setSetAssignments(sortedAssignments);
+    // Neue Set-Gruppe automatisch auswählen
+    setSetAssignment([newAssignment._id]);
     setShowSetAssignmentModal(false);
     setNewSetAssignmentName("");
     setSetAssignmentModalMessage("");
@@ -507,7 +509,17 @@ export default function SetAnlegen() {
 
               {/* Verfügbarkeit */}
               <div>
-                <label className="block text-sm font-medium text-gray-900 mb-2">Verfügbarkeit</label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-900">Verfügbarkeit / Set-Gruppen</label>
+                  <Button 
+                    type="button" 
+                    onClick={() => setShowSetAssignmentModal(true)} 
+                    className="bg-orange-500 hover:bg-orange-600 text-black px-3 py-2 rounded-md transition-colors"
+                    title="Neue Set-Gruppe hinzufügen"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </Button>
+                </div>
                 <div className="border border-gray-300 rounded-md p-3 bg-white">
                   <div className="mb-2">
                     <label className="flex items-center text-sm">
@@ -633,19 +645,23 @@ export default function SetAnlegen() {
           {showSetAssignmentModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg shadow-lg p-6 min-w-96">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Neue Zuordnung hinzufügen</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Neue Set-Gruppe hinzufügen</h3>
                 <input
                   type="text"
                   value={newSetAssignmentName}
                   onChange={e => setNewSetAssignmentName(e.target.value)}
-                  placeholder="Zuordnungsname"
+                  placeholder="Set-Gruppen Name"
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                 />
                 <div className="flex gap-3 mt-4">
                   <Button onClick={addSetAssignment} className="bg-orange-500 hover:bg-orange-600 text-black px-4 py-2 rounded-md transition-colors">
                     Speichern
                   </Button>
-                  <Button onClick={() => setShowSetAssignmentModal(false)} className="bg-black hover:bg-gray-800 text-orange-500 px-4 py-2 rounded-md transition-colors">
+                  <Button onClick={() => {
+                    setShowSetAssignmentModal(false);
+                    setNewSetAssignmentName("");
+                    setSetAssignmentModalMessage("");
+                  }} className="bg-black hover:bg-gray-800 text-orange-500 px-4 py-2 rounded-md transition-colors">
                     Abbrechen
                   </Button>
                 </div>

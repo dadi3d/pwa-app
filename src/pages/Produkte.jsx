@@ -33,7 +33,7 @@ export default function Produkte() {
 
   const [userId, setUserId] = useState('');
   const [userRole, setUserRole] = useState('student');
-  const [userSetAssignments, setUserSetAssignments] = useState([]); // Set-Assignments des angemeldeten Benutzers
+  const [userSetAssignments, setUserSetAssignments] = useState([]); // Set-Gruppen des angemeldeten Benutzers
   const token = useAuth(state => state.token);
 
   // Sets laden
@@ -73,7 +73,7 @@ export default function Produkte() {
     fetchUserId();
   }, [token]);
 
-  // Benutzer-ID und Set-Assignments aus JWT holen
+  // Benutzer-ID und Set-Gruppen aus JWT holen
   async function fetchUserId() {
     try {
       const userData = await fetchUserData();
@@ -83,13 +83,13 @@ export default function Produkte() {
           setUserRole(userData.role);
         }
         
-        // Lade die vollständigen Benutzerdaten mit Set-Assignments
+        // Lade die vollständigen Benutzerdaten mit Set-Gruppen
         const userResponse = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`);
         const allUsers = await userResponse.json();
         const currentUser = allUsers.find(user => user.id === userData.id);
         
         if (currentUser && currentUser.set_assignments) {
-          console.log('User Set-Assignments:', currentUser.set_assignments);
+          console.log('User Set-Gruppen:', currentUser.set_assignments);
           setUserSetAssignments(currentUser.set_assignments || []);
         } else {
           setUserSetAssignments([]);
@@ -271,9 +271,9 @@ export default function Produkte() {
     }
   };
 
-  // Gefilterte Sets basierend auf Suchbegriff, Kategorie und User-Set-Assignments
+  // Gefilterte Sets basierend auf Suchbegriff, Kategorie und User-Set-Gruppen
   const filteredSets = sets.filter((set) => {
-    // Set-Assignment-Filter: 
+    // Set-Gruppen-Filter: 
     // Sets ohne set_assignment (null/undefined/leere Liste) sind IMMER für alle sichtbar
     const hasNoAssignment = !set.set_assignment || 
                            (Array.isArray(set.set_assignment) && set.set_assignment.length === 0) ||
@@ -291,7 +291,7 @@ export default function Produkte() {
           ? set.set_assignment.map(sa => sa._id || sa)
           : [set.set_assignment._id || set.set_assignment];
         
-        // Prüfe ob mindestens eine Set-Assignment mit User-Assignments übereinstimmt
+        // Prüfe ob mindestens eine Set-Gruppe mit User-Set-Gruppen übereinstimmt
         const hasMatchingAssignment = setAssignmentIds.some(saId => 
           userAssignmentIds.includes(saId)
         );
@@ -300,7 +300,7 @@ export default function Produkte() {
           return false;
         }
       } else {
-        // Benutzer hat keine Set-Assignments, aber Set hat Assignment(s) -> nicht anzeigen
+        // Benutzer hat keine Set-Gruppen, aber Set hat Set-Gruppen zugewiesen -> nicht anzeigen
         return false;
       }
     }
@@ -464,20 +464,20 @@ export default function Produkte() {
       <div id="setList" className="flex flex-wrap gap-6 justify-center">
         {filteredSets.length === 0 && userSetAssignments.length === 0 && (
           <div className="text-center text-gray-500 text-lg max-w-md">
-            <p className="mb-2">Keine Equipment-Bereiche zugewiesen.</p>
+            <p className="mb-2">Keine Set-Gruppen zugewiesen.</p>
             <p className="text-sm">Sie sehen nur allgemeines Equipment ohne spezielle Zuordnung.</p>
           </div>
         )}
         {filteredSets.length === 0 && searchTerm && userSetAssignments.length > 0 && (
-          <div className="text-gray-500 text-lg">Keine Sets für "{searchTerm}" in Ihren zugewiesenen Bereichen gefunden.</div>
+          <div className="text-gray-500 text-lg">Keine Sets für "{searchTerm}" in Ihren zugewiesenen Set-Gruppen gefunden.</div>
         )}
         {filteredSets.length === 0 && !searchTerm && selectedDateRange.start && selectedDateRange.end && userSetAssignments.length > 0 && (
           <div className="text-gray-500 text-lg">
-            Keine Sets im ausgewählten Zeitraum ({new Date(selectedDateRange.start).toLocaleDateString('de-DE')} - {new Date(selectedDateRange.end).toLocaleDateString('de-DE')}) in Ihren zugewiesenen Bereichen verfügbar.
+            Keine Sets im ausgewählten Zeitraum ({new Date(selectedDateRange.start).toLocaleDateString('de-DE')} - {new Date(selectedDateRange.end).toLocaleDateString('de-DE')}) in Ihren zugewiesenen Set-Gruppen verfügbar.
           </div>
         )}
         {filteredSets.length === 0 && !searchTerm && !selectedDateRange.start && userSetAssignments.length > 0 && (
-          <div className="text-gray-500 text-lg">Keine Sets in Ihren zugewiesenen Bereichen gefunden.</div>
+          <div className="text-gray-500 text-lg">Keine Sets in Ihren zugewiesenen Set-Gruppen gefunden.</div>
         )}
         {filteredSets.map((p) => {
           const brand = p.manufacturer?.name || "–";
@@ -539,7 +539,7 @@ export default function Produkte() {
                   {brand} <span className="text-gray-900 ">{setName}</span>
                 </span>
                 
-                {/* Set-Assignment Tags */}
+                {/* Set-Gruppen Tags */}
                 {p.set_assignment && Array.isArray(p.set_assignment) && p.set_assignment.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {p.set_assignment.map((assignment) => {

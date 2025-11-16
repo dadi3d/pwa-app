@@ -73,10 +73,10 @@ const EquipmentManagerMenu = () => {
                             Set-Übersicht
                         </Link>
                         <Link 
-                            href="/verfügbarkeiten"
+                            href="/setgruppen"
                             className="block p-3 rounded-lg border border-gray-200 text-black hover:text-black transition-colors duration-200 hover:bg-gray-50 hover:border-orange-500"
                         >
-                            Verfügbarkeiten
+                            Set-Gruppen
                         </Link>
                         <Link 
                             href="/hersteller"
