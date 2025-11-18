@@ -743,7 +743,10 @@ export default function AuftragAnlegen() {
                   <option value="">Bitte wählen</option>
                   {teachers.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.name || t.id} {t.email ? `(${t.email})` : ""}
+                      {t.first_name && t.last_name 
+                        ? `${t.first_name} ${t.last_name}` 
+                        : t.id
+                      } {t.email ? `(${t.email})` : ""}
                     </option>
                   ))}
                 </select>

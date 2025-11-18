@@ -266,6 +266,24 @@ export default function Auftraege() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Benutzer:</label>
+                    <p className="text-sm text-gray-900">
+                      {selectedOrder.user?.first_name && selectedOrder.user?.last_name 
+                        ? `${selectedOrder.user.first_name} ${selectedOrder.user.last_name}`
+                        : selectedOrder.user?.email || '–'
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Zugewiesene Lehrkraft:</label>
+                    <p className="text-sm text-gray-900">
+                      {selectedOrder.assigned_teacher?.first_name && selectedOrder.assigned_teacher?.last_name 
+                        ? `${selectedOrder.assigned_teacher.first_name} ${selectedOrder.assigned_teacher.last_name}`
+                        : selectedOrder.assigned_teacher?.email || '–'
+                      }
+                    </p>
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Ort:</label>
                     <p className="text-sm text-gray-900">{selectedOrder.location || '–'}</p>
                   </div>
