@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { MAIN_VARIABLES } from '../config';
 import { useAuth, fetchUserData, authenticatedFetch } from './services/auth';
 import { Heading, Subheading } from '../styles/catalyst/heading';
@@ -15,6 +15,19 @@ export default function Nutzer() {
     const [searchTerm, setSearchTerm] = useState(''); // Suchbegriff
     const [selectedRole, setSelectedRole] = useState(''); // Rollenfilter
     const [setAssignments, setSetAssignments] = useState([]); // Verfügbare Set-Gruppen
+
+    // Berechtigungen Modal States
+    const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+    const [selectedUserForPermissions, setSelectedUserForPermissions] = useState(null);
+    const [allSets, setAllSets] = useState([]);
+    const [userSetAssignments, setUserSetAssignments] = useState([]);
+    const [userIndividualSets, setUserIndividualSets] = useState([]);
+    const [permissionsModalError, setPermissionsModalError] = useState('');
+    
+    // Filter States für Berechtigungen Modal
+    const [setGroupFilter, setSetGroupFilter] = useState('');
+    const [setSearchFilter, setSetSearchFilter] = useState('');
+    const [filteredIndividualSets, setFilteredIndividualSets] = useState([]);
 
     // Modal-States für Benutzer hinzufügen
     const [showAddModal, setShowAddModal] = useState(false);
@@ -37,13 +50,19 @@ export default function Nutzer() {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const [usersRes, setAssignmentsRes] = await Promise.all([
+                const [usersRes, setAssignmentsRes, setsRes] = await Promise.all([
                     authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`),
                     authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`)
                         .catch(err => {
                             console.warn('Set-Gruppen konnten nicht geladen werden:', err);
                             return { json: () => [] }; // Fallback zu leerem Array
-                        })
+                        }),
+                    fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    }).catch(err => {
+                        console.warn('Sets konnten nicht geladen werden:', err);
+                        return { ok: false, json: () => [] }; // Fallback
+                    })
                 ]);
                 
                 const usersData = await usersRes.json();
@@ -54,6 +73,14 @@ export default function Nutzer() {
                 
                 setUsers(usersData);
                 setSetAssignments(Array.isArray(setAssignmentsData) ? setAssignmentsData : []);
+                
+                // Sets für die Badge-Anzeige laden
+                if (setsRes.ok) {
+                    const setsData = await setsRes.json();
+                    console.log('Geladene Sets für Badge-Anzeige:', setsData.length);
+                    setAllSets(setsData);
+                }
+                
                 setLoading(false);
             } catch (error) {
                 console.error('Fehler beim Laden der Daten:', error);
@@ -74,22 +101,198 @@ export default function Nutzer() {
         fetchUserId();
     }, [token]);
 
+    // Filter für einzelne Sets anwenden (einfache Textsuche)
+    const applyIndividualSetsFilter = useCallback((searchText) => {
+        console.log('Applying simple filter:', { searchText, allSetsLength: allSets.length });
+        
+        let filtered = [...allSets]; // Kopie erstellen
+        
+        if (searchText && searchText.trim()) {
+            const searchLower = searchText.toLowerCase();
+            filtered = filtered.filter(set => {
+                const manufacturerName = (set.manufacturer?.name || '').toLowerCase();
+                const setName = (set.set_name?.name?.de || set.set_name?.name || '').toLowerCase();
+                const combinedName = `${manufacturerName} ${setName}`.toLowerCase();
+                
+                return manufacturerName.includes(searchLower) || 
+                       setName.includes(searchLower) || 
+                       combinedName.includes(searchLower);
+            });
+            console.log('After text filter:', filtered.length);
+        }
+        
+        // Alphabetisch sortieren nach Hersteller-Set-Name
+        filtered = filtered.sort((a, b) => {
+            const aName = `${a.manufacturer?.name || ''} - ${a.set_name?.name?.de || a.set_name?.name || ''}`;
+            const bName = `${b.manufacturer?.name || ''} - ${b.set_name?.name?.de || b.set_name?.name || ''}`;
+            return aName.localeCompare(bName, 'de', { sensitivity: 'base' });
+        });
+        
+        console.log('Final filtered sets:', filtered.length);
+        setFilteredIndividualSets(filtered);
+    }, [allSets]);
+
+    // Filter-Effekte für das Berechtigungen-Modal
+    useEffect(() => {
+        if (showPermissionsModal && allSets.length > 0) {
+            console.log('Filter effect triggered, applying initial filter');
+            applyIndividualSetsFilter(''); // Initial ohne Filter
+        }
+    }, [showPermissionsModal, applyIndividualSetsFilter]);
+
     // Benutzer-ID aus JWT holen
     async function fetchUserId() {
         try {
-            const userData = await fetchUserData();
-            if(userData) {
-                setUserId(userData.id);
-                if(userData.role) {
-                    setUserRole(userData.role);
-                }
+            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/user-info`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                setUserId(data.id);
+                setUserRole(data.role);
             }
         } catch (err) {
-            setUserId('');
+            console.error('Fehler beim Laden der Benutzer-ID:', err);
         }
     }
 
-    const handleRoleChange = async (id, newRole) => {
+    // Alle Sets laden für Berechtigungen Modal
+    const loadAllSets = async () => {
+        try {
+            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Geladene Sets:', data.length, data.slice(0, 3)); // Debug log
+                setAllSets(data);
+            }
+        } catch (error) {
+            console.error('Fehler beim Laden der Sets:', error);
+        }
+    };
+
+    // Berechtigungen Modal öffnen
+    const openPermissionsModal = async (user) => {
+        setSelectedUserForPermissions(user);
+        setPermissionsModalError('');
+        
+        // Lade alle Sets falls noch nicht geladen
+        if (allSets.length === 0) {
+            await loadAllSets();
+        }
+        
+        // Separiere Set-Gruppen und einzelne Sets
+        const setGroupIds = [];
+        const individualSetIds = [];
+        
+        if (user.set_assignments && user.set_assignments.length > 0) {
+            for (const assignmentId of user.set_assignments) {
+                // Null-Check für assignmentId
+                if (!assignmentId) {
+                    console.warn('Null assignmentId found in user.set_assignments:', assignmentId);
+                    continue;
+                }
+                
+                // Prüfe ob es eine Set-Gruppe ist
+                const isSetGroup = setAssignments.some(sg => sg._id === assignmentId);
+                if (isSetGroup) {
+                    setGroupIds.push(assignmentId);
+                } else {
+                    // Es ist ein einzelnes Set
+                    individualSetIds.push(assignmentId);
+                }
+            }
+        }
+        
+        setUserSetAssignments(setGroupIds);
+        setUserIndividualSets(individualSetIds);
+        
+        // Reset Filter beim Öffnen
+        setSetGroupFilter('');
+        setSetSearchFilter('');
+        
+        // Initial Sets filtern
+        setFilteredIndividualSets(allSets);
+        
+        // Initial Filter anwenden
+        setTimeout(() => applyIndividualSetsFilter(''), 0);
+        
+        setShowPermissionsModal(true);
+    };
+
+    // Berechtigungen Modal schließen
+    const closePermissionsModal = () => {
+        setShowPermissionsModal(false);
+        setSelectedUserForPermissions(null);
+        setUserSetAssignments([]);
+        setUserIndividualSets([]);
+        setPermissionsModalError('');
+        setSetGroupFilter('');
+        setSetSearchFilter('');
+        setFilteredIndividualSets([]);
+    };
+
+    // Set-Gruppe hinzufügen/entfernen
+    const toggleSetGroup = (setGroupId) => {
+        setUserSetAssignments(prev => 
+            prev.includes(setGroupId) 
+                ? prev.filter(id => id !== setGroupId)
+                : [...prev, setGroupId]
+        );
+    };
+
+    // Einzelnes Set hinzufügen/entfernen
+    const toggleIndividualSet = (setId) => {
+        setUserIndividualSets(prev => 
+            prev.includes(setId) 
+                ? prev.filter(id => id !== setId)
+                : [...prev, setId]
+        );
+    };
+
+
+
+    // Berechtigungen speichern
+    const savePermissions = async () => {
+        if (!selectedUserForPermissions) return;
+        
+        setPermissionsModalError('');
+        
+        try {
+            const combinedAssignments = [...userSetAssignments, ...userIndividualSets];
+            
+            const response = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/${selectedUserForPermissions.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    set_assignments: combinedAssignments
+                })
+            });
+
+            if (response.ok) {
+                // Nutzer-Liste neu laden
+                const updatedResponse = await fetch(`${MAIN_VARIABLES.SERVER_URL}/api/users`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (updatedResponse.ok) {
+                    const updatedUsers = await updatedResponse.json();
+                    setUsers(updatedUsers);
+                }
+                
+                closePermissionsModal();
+            } else {
+                const errorData = await response.json();
+                setPermissionsModalError(errorData.error || 'Fehler beim Speichern der Berechtigungen');
+            }
+        } catch (error) {
+            console.error('Fehler beim Speichern der Berechtigungen:', error);
+            setPermissionsModalError('Fehler beim Speichern der Berechtigungen');
+        }
+    };    const handleRoleChange = async (id, newRole) => {
         try {
             await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/${id}`, {
                 method: 'PUT',
@@ -103,23 +306,7 @@ export default function Nutzer() {
         setTimeout(() => setUpdatedUserId(null), 2000);
     };
 
-    const handleSetAssignmentsChange = async (id, newSetAssignments) => {
-        try {
-            const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/users/${id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ set_assignments: newSetAssignments }),
-            });
-            
-            if (response.ok) {
-                const updatedData = await response.json();
-                setUsers(users => users.map(u => u.id === id ? { ...u, set_assignments: updatedData.user.set_assignments } : u));
-                setUpdatedUserId(id);
-                setTimeout(() => setUpdatedUserId(null), 2000);
-            }
-        } catch (error) {
-            console.error('Fehler beim Aktualisieren der Set-Gruppen:', error);
-        }
-    };
+
 
     const handleAddUser = async () => {
         setAddModalMessage('');
@@ -418,6 +605,16 @@ export default function Nutzer() {
                                                         ✓
                                                     </span>
                                                 )}
+                                                {/* Berechtigungen Button */}
+                                                <button
+                                                    onClick={() => openPermissionsModal(user)}
+                                                    className="p-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+                                                    title="Berechtigungen verwalten"
+                                                >
+                                                    <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                    </svg>
+                                                </button>
                                                 {/* Löschen Button */}
                                                 <button
                                                     onClick={() => handleDeleteUser(user.id)}
@@ -429,58 +626,55 @@ export default function Nutzer() {
                                             </div>
                                         </div>
 
-                                        {/* Untere Zeile: Set-Gruppen */}
+                                        {/* Untere Zeile: Berechtigungen Anzeige */}
                                         <div className="border-t pt-3">
                                             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                                                 <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-                                                    Zugewiesene Set-Gruppen:
+                                                    Zugewiesene Berechtigungen:
                                                 </label>
                                                 <div className="flex-1">
-                                                    <Dropdown>
-                                                        <DropdownButton outline className="w-full sm:w-auto hover:border-orange-500 hover:text-orange-600 transition-colors duration-200">
-                                                            <span className="mr-2">
-                                                                {user.set_assignments && user.set_assignments.length > 0 
-                                                                    ? `${user.set_assignments.length} Set-Gruppe(n) zugewiesen`
-                                                                    : "Set-Gruppen zuweisen"
-                                                                }
-                                                            </span>
-                                                            <ChevronDownIcon className="size-4" />
-                                                        </DropdownButton>
-                                                        <DropdownMenu className="border border-gray-200 max-h-60 overflow-y-auto">
-                                                            {setAssignments.map((assignment) => {
-                                                                const isSelected = user.set_assignments?.some(ua => ua._id === assignment._id);
-                                                                return (
-                                                                    <DropdownItem 
-                                                                        key={assignment._id}
-                                                                        onClick={() => {
-                                                                            const currentAssignments = user.set_assignments?.map(a => a._id) || [];
-                                                                            const newAssignments = isSelected 
-                                                                                ? currentAssignments.filter(id => id !== assignment._id)
-                                                                                : [...currentAssignments, assignment._id];
-                                                                            handleSetAssignmentsChange(user.id, newAssignments);
-                                                                        }}
-                                                                        className={isSelected ? "bg-blue-50 text-blue-700" : ""}
-                                                                    >
-                                                                        <div className="flex items-center justify-between w-full">
-                                                                            <span>{assignment.name?.de || assignment.name}</span>
-                                                                            {isSelected && <span className="text-blue-600">✓</span>}
-                                                                        </div>
-                                                                    </DropdownItem>
-                                                                );
-                                                            })}
-                                                        </DropdownMenu>
-                                                    </Dropdown>
+                                                    <span className="text-sm text-gray-600">
+                                                        {user.set_assignments && user.set_assignments.length > 0 
+                                                            ? `${user.set_assignments.length} Berechtigung(en) zugewiesen`
+                                                            : "Keine Berechtigungen zugewiesen"
+                                                        }
+                                                    </span>
                                                 </div>
                                             </div>
                                             
-                                            {/* Anzeige der zugewiesenen Set-Gruppen */}
+                                            {/* Anzeige der zugewiesenen Berechtigungen */}
                                             {user.set_assignments && user.set_assignments.length > 0 && (
                                                 <div className="mt-2 flex flex-wrap gap-1">
-                                                    {user.set_assignments.map((assignment) => (
-                                                        <Badge key={assignment._id} color="green" className="text-xs">
-                                                            {assignment.name?.de || assignment.name}
-                                                        </Badge>
-                                                    ))}
+                                                    {user.set_assignments.map((assignmentId) => {
+                                                        if (!assignmentId) return null;
+                                                        
+                                                        // Versuche zuerst als Set-Gruppe
+                                                        const setGroup = setAssignments.find(sg => sg._id === assignmentId);
+                                                        if (setGroup) {
+                                                            return (
+                                                                <Badge key={assignmentId} color="blue" className="text-xs">
+                                                                    Gruppe: {setGroup.name?.de || setGroup.name || 'Unbekannte Gruppe'}
+                                                                </Badge>
+                                                            );
+                                                        }
+                                                        
+                                                        // Dann als einzelnes Set
+                                                        const individualSet = allSets.find(set => set._id === assignmentId);
+                                                        if (individualSet) {
+                                                            return (
+                                                                <Badge key={assignmentId} color="green" className="text-xs">
+                                                                    Set: {individualSet.set_name?.name?.de || 'Unbekanntes Set'}
+                                                                </Badge>
+                                                            );
+                                                        }
+                                                        
+                                                        // Fallback für unbekannte IDs
+                                                        return (
+                                                            <Badge key={assignmentId} color="gray" className="text-xs">
+                                                                Unbekannt: {assignmentId}
+                                                            </Badge>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>
@@ -659,7 +853,7 @@ export default function Nutzer() {
                                             <div className="flex flex-wrap gap-1">
                                                 {newUser.set_assignments.map((assignmentId) => {
                                                     const assignment = setAssignments.find(sa => sa._id === assignmentId);
-                                                    return assignment ? (
+                                                    return assignment && assignment.name ? (
                                                         <Badge key={assignmentId} color="green" className="text-xs">
                                                             {assignment.name?.de || assignment.name}
                                                         </Badge>
@@ -732,6 +926,271 @@ export default function Nutzer() {
                                     ) : (
                                         'Benutzer erstellen'
                                     )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Berechtigungen Modal */}
+            {showPermissionsModal && selectedUserForPermissions && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                        <div className="p-6">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-semibold text-gray-900">
+                                    Berechtigungen verwalten - {selectedUserForPermissions.id}
+                                </h2>
+                                <button
+                                    onClick={closePermissionsModal}
+                                    className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                                >
+                                    <span className="sr-only">Schließen</span>
+                                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {permissionsModalError && (
+                                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                    <p className="text-sm text-red-600">{permissionsModalError}</p>
+                                </div>
+                            )}
+
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                {/* Set-Gruppen Sektion */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+                                        Set-Gruppen
+                                    </h3>
+                                    
+                                    {/* Set-Gruppen Filter */}
+                                    <div className="space-y-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Set-Gruppen filtern..."
+                                            value={setGroupFilter}
+                                            onChange={(e) => setSetGroupFilter(e.target.value)}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                    </div>
+
+                                    {/* Set-Gruppen Liste */}
+                                    <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                                        {(() => {
+                                            const filteredSetGroups = setAssignments.filter(sg => {
+                                                if (!setGroupFilter) return true;
+                                                const name = sg.name?.de || sg.name || '';
+                                                return name.toLowerCase().includes(setGroupFilter.toLowerCase());
+                                            });
+                                            
+                                            if (filteredSetGroups.length === 0) {
+                                                return (
+                                                    <div className="text-center py-8 text-gray-500">
+                                                        <p>Keine Set-Gruppen gefunden</p>
+                                                        {setGroupFilter && (
+                                                            <p className="text-xs mt-1">Filter: "{setGroupFilter}"</p>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                            
+                                            return filteredSetGroups.map(setGroup => {
+                                                const isCurrentlySelected = userSetAssignments.includes(setGroup._id);
+                                                const wasOriginallyAssigned = selectedUserForPermissions?.set_assignments?.some(
+                                                    assignmentId => assignmentId === setGroup._id
+                                                );
+                                                
+                                                return (
+                                                    <div
+                                                        key={setGroup._id}
+                                                        className={`p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                                                            isCurrentlySelected
+                                                                ? 'bg-blue-50 border-blue-400 shadow-sm'
+                                                                : wasOriginallyAssigned
+                                                                ? 'bg-orange-50 border-orange-400 hover:bg-orange-100'
+                                                                : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                                                        }`}
+                                                        onClick={() => toggleSetGroup(setGroup._id)}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span className="font-medium">
+                                                                    {setGroup.name?.de || setGroup.name || 'Unbekannte Set-Gruppe'}
+                                                                </span>
+                                                                {wasOriginallyAssigned && !isCurrentlySelected && (
+                                                                    <span className="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                                                                        Aktuell zugewiesen
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                {isCurrentlySelected && (
+                                                                    <span className="text-blue-600 font-bold text-lg">✓</span>
+                                                                )}
+                                                                {wasOriginallyAssigned && (
+                                                                    <span className="text-orange-500 text-lg">●</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
+                                </div>
+
+                                {/* Einzelne Sets Sektion */}
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-medium text-gray-900 border-b pb-2">
+                                        Einzelne Sets
+                                    </h3>
+                                    
+                                    {/* Filter für einzelne Sets */}
+                                    <div className="space-y-2">
+                                        <input
+                                            type="text"
+                                            placeholder="Sets durchsuchen (Hersteller oder Set-Name)..."
+                                            value={setSearchFilter}
+                                            onChange={(e) => {
+                                                const searchText = e.target.value;
+                                                setSetSearchFilter(searchText);
+                                                applyIndividualSetsFilter(searchText);
+                                            }}
+                                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        />
+                                        
+                                        <div className="text-xs text-gray-500">
+                                            {filteredIndividualSets.length} von {allSets.length} Sets gefunden
+                                            {setSearchFilter && ` (Filter: "${setSearchFilter}")`}
+                                        </div>
+                                    </div>
+
+                                    {/* Sets Liste */}
+                                    <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-2">
+                                        {(() => {
+                                            console.log('Filtered Sets:', filteredIndividualSets.length, {
+                                                setSearchFilter,
+                                                totalSets: allSets.length
+                                            }); // Debug log
+                                            
+                                            if (filteredIndividualSets.length === 0) {
+                                                return (
+                                                    <div className="text-center py-8 text-gray-500">
+                                                        <p>Keine Sets gefunden</p>
+                                                        {setSearchFilter && (
+                                                            <p className="text-xs mt-1">
+                                                                Suchbegriff: "{setSearchFilter}"
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                );
+                                            }
+                                            
+                                            return filteredIndividualSets.map(set => {
+                                                const isCurrentlySelected = userIndividualSets.includes(set._id);
+                                                const wasOriginallyAssigned = selectedUserForPermissions?.set_assignments?.some(
+                                                    assignmentId => assignmentId === set._id
+                                                );
+                                                
+                                                return (
+                                                    <div
+                                                        key={set._id}
+                                                        className={`p-3 border-2 rounded-lg cursor-pointer transition-all duration-200 ${
+                                                            isCurrentlySelected
+                                                                ? 'bg-green-50 border-green-400 shadow-sm'
+                                                                : wasOriginallyAssigned
+                                                                ? 'bg-orange-50 border-orange-400 hover:bg-orange-100'
+                                                                : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                                                        }`}
+                                                        onClick={() => toggleIndividualSet(set._id)}
+                                                    >
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <div className="font-medium">
+                                                                        {(set.manufacturer?.name || 'Unbekannter Hersteller')} - {set.set_name?.name?.de || 'Unbekanntes Set'}
+                                                                    </div>
+                                                                    {wasOriginallyAssigned && !isCurrentlySelected && (
+                                                                        <span className="text-xs text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">
+                                                                            Aktuell zugewiesen
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                {isCurrentlySelected && (
+                                                                    <span className="text-green-600 font-bold text-lg">✓</span>
+                                                                )}
+                                                                {wasOriginallyAssigned && (
+                                                                    <span className="text-orange-500 text-lg">●</span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            });
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Legende */}
+                            <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                                <h4 className="font-medium text-gray-900 mb-3">Legende & Zusammenfassung</h4>
+                                
+                                {/* Legende */}
+                                <div className="flex flex-wrap gap-4 mb-4 text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 bg-blue-50 border-2 border-blue-400 rounded"></div>
+                                        <span>Neu ausgewählt</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 bg-orange-50 border-2 border-orange-400 rounded"></div>
+                                        <span>Aktuell zugewiesen</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-blue-600 font-bold">✓</span>
+                                        <span>Wird zugewiesen</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-orange-500">●</span>
+                                        <span>Ursprünglich zugewiesen</span>
+                                    </div>
+                                </div>
+                                
+                                {/* Zusammenfassung */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm border-t pt-3">
+                                    <div>
+                                        <span className="font-medium">Set-Gruppen:</span>
+                                        <span className="ml-2 text-blue-600 font-bold">{userSetAssignments.length}</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Einzelne Sets:</span>
+                                        <span className="ml-2 text-green-600 font-bold">{userIndividualSets.length}</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Gesamt:</span>
+                                        <span className="ml-2 text-purple-600 font-bold">{userSetAssignments.length + userIndividualSets.length}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Aktionen */}
+                            <div className="flex gap-3 mt-6 pt-4 border-t border-gray-200">
+                                <button
+                                    onClick={closePermissionsModal}
+                                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors duration-200"
+                                >
+                                    Abbrechen
+                                </button>
+                                <button
+                                    onClick={savePermissions}
+                                    className="flex-1 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-black rounded-md font-medium transition-colors"
+                                >
+                                    Berechtigungen speichern
                                 </button>
                             </div>
                         </div>

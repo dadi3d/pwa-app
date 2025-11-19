@@ -10,7 +10,7 @@ const CustomImagePreviewer = ({ file }) => {
   const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(file.name);
   if (!isImage) return null;
 
-  const imageUrl = `${MAIN_VARIABLES.SERVER_URL}/api/data/download-data-file?filePath=${encodeURIComponent(file.path)}`;
+  const imageUrl = `${MAIN_VARIABLES.SERVER_URL}/api/public-data/download-file?filePath=${encodeURIComponent(file.path)}`;
   return (
     <img
       src={imageUrl}
@@ -22,7 +22,7 @@ const CustomImagePreviewer = ({ file }) => {
 
 function App() {
   const [files, setFiles] = useState([]);
-  
+  const [isAuthorized, setIsAuthorized] = useState(false);
   const [userId, setUserId] = useState('');
   const [userRole, setUserRole] = useState('student');
   const token = useAuth(state => state.token);
@@ -42,7 +42,7 @@ function App() {
     fetchUserId();
   }, [token]);
 
-  // Benutzer-ID aus JWT holen
+  // Benutzer-ID aus JWT holen und Admin-Berechtigung prüfen
   async function fetchUserId() {
     try {
       const userData = await fetchUserData();
@@ -50,10 +50,13 @@ function App() {
         setUserId(userData.id);
         if(userData.role) {
           setUserRole(userData.role);
+          // Nur Admins dürfen auf den FileManager zugreifen
+          setIsAuthorized(userData.role === 'admin');
         }
       }
     } catch (err) {
       setUserId('');
+      setIsAuthorized(false);
     }
   }
 
@@ -87,7 +90,7 @@ function App() {
     filesToDownload.forEach(file => {
       // Nur Dateien herunterladen, keine Ordner
       if (!file.isDirectory) {
-        const url = `${MAIN_VARIABLES.SERVER_URL}/api/data/download-data-file?filePath=${encodeURIComponent(file.path)}`;
+        const url = `${MAIN_VARIABLES.SERVER_URL}/api/public-data/download-file?filePath=${encodeURIComponent(file.path)}`;
         // Download im Browser auslösen
         window.open(url, '_blank');
       }
@@ -151,6 +154,21 @@ function App() {
     }
   };
 
+  // Zeige nur den FileManager an, wenn der User Admin ist
+  if (!isAuthorized) {
+    return (
+      <div style={{ 
+        padding: '20px', 
+        textAlign: 'center', 
+        color: '#d32f2f',
+        fontSize: '18px' 
+      }}>
+        <h2>Zugriff verweigert</h2>
+        <p>Sie benötigen Admin-Berechtigung, um auf den File Manager zuzugreifen.</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <FileManager
@@ -164,7 +182,7 @@ function App() {
         onFileUploaded={handleFileUploaded}
         filePreviewComponent={file => <CustomImagePreviewer file={file} />}
         fileUploadConfig={{
-          url: `${MAIN_VARIABLES.SERVER_URL}/api/data/upload-file`,
+          url: `${MAIN_VARIABLES.SERVER_URL}/api/public-data/upload-file`,
           method: "POST",
           headers: { "Accept": "application/json" }
         }}

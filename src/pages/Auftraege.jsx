@@ -85,7 +85,7 @@ export default function Auftraege() {
       order.sets.forEach((set, index) => {
         console.log(`Set ${index + 1}:`, set);
         console.log(`Set ${index + 1} - manufacturer:`, set.manufacturer);
-        console.log(`Set ${index + 1} - set_name:`, set.set_name.name.de);
+        console.log(`Set ${index + 1} - set_name:`, set.set_name?.name?.de);
       });
       
       // Thumbnail-URLs für Sets laden, falls noch nicht vorhanden

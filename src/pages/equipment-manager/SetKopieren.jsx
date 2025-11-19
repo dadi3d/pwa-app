@@ -32,7 +32,6 @@ export default function SetKopieren() {
   const [productTestIntervals, setProductTestIntervals] = useState([]);
   const [productCustomerIds, setProductCustomerIds] = useState([]);
   const [rooms, setRooms] = useState([]);
-  const [setAssignments, setSetAssignments] = useState([]);
   
   // Thumbnail States
   const [availableThumbnails, setAvailableThumbnails] = useState([]);
@@ -47,8 +46,8 @@ export default function SetKopieren() {
   const [showPreview, setShowPreview] = useState(true);
   const [newSetNumber, setNewSetNumber] = useState(1);
   
-  // Set Assignment States
-  const [selectedSetAssignments, setSelectedSetAssignments] = useState([]);
+  // Availability State - simplified
+  const [availabilityType, setAvailabilityType] = useState("free"); // "free" für null, "restricted" für []
 
   // Lade ursprüngliches Set und dessen Produkte
   useEffect(() => {
@@ -65,26 +64,24 @@ export default function SetKopieren() {
 
   async function loadDropdownData() {
     try {
-      const [brandsRes, categoriesRes, statesRes, statusRes, intervalsRes, customerIdsRes, roomsRes, setAssignmentsRes] = await Promise.all([
+      const [brandsRes, categoriesRes, statesRes, statusRes, intervalsRes, customerIdsRes, roomsRes] = await Promise.all([
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/brands`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-categories`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-states`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-status`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-test-intervals`),
         authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/product-customerids`),
-        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/rooms`),
-        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`)
+        authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/rooms`)
       ]);
 
-      const [brandsData, categoriesData, statesData, statusData, intervalsData, customerIdsData, roomsData, setAssignmentsData] = await Promise.all([
+      const [brandsData, categoriesData, statesData, statusData, intervalsData, customerIdsData, roomsData] = await Promise.all([
         brandsRes.json(),
         categoriesRes.json(),
         statesRes.json(),
         statusRes.json(),
         intervalsRes.json(),
         customerIdsRes.json(),
-        roomsRes.json(),
-        setAssignmentsRes.json()
+        roomsRes.json()
       ]);
 
       setBrands(brandsData.sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })));
@@ -94,7 +91,6 @@ export default function SetKopieren() {
       setProductTestIntervals(intervalsData);
       setProductCustomerIds(customerIdsData);
       setRooms(roomsData.sort((a, b) => (a.name || "").localeCompare(b.name || "", "de", { sensitivity: "base" })));
-      setSetAssignments(setAssignmentsData.sort((a, b) => (a.name?.de || a.name || "").localeCompare(b.name?.de || b.name || "", "de", { sensitivity: "base" })));
     } catch (error) {
       console.error("Fehler beim Laden der Dropdown-Daten:", error);
       setMessage("Fehler beim Laden der Dropdown-Daten");
@@ -114,13 +110,14 @@ export default function SetKopieren() {
       const setData = await setRes.json();
       setOriginalSet(setData);
 
-      // Set-Gruppen initialisieren (von originalSet übernehmen)
-      if (setData.set_assignment) {
-        if (Array.isArray(setData.set_assignment)) {
-          setSelectedSetAssignments(setData.set_assignment.map(sa => sa._id || sa));
-        } else {
-          setSelectedSetAssignments([setData.set_assignment._id || setData.set_assignment]);
-        }
+      // Verfügbarkeit basierend auf originalSet setzen
+      if (setData.set_assignment === null) {
+        setAvailabilityType("free"); // Freie Verfügbarkeit
+      } else if (Array.isArray(setData.set_assignment) && setData.set_assignment.length === 0) {
+        setAvailabilityType("restricted"); // Eingeschränkte Verfügbarkeit
+      } else {
+        // Legacy: Falls noch alte SetGruppen vorhanden sind, als eingeschränkt behandeln
+        setAvailabilityType("restricted");
       }
 
       // Thumbnails laden
@@ -252,28 +249,7 @@ export default function SetKopieren() {
     }, 100);
   }
 
-  // Set-Gruppen Handling
-  function handleSetAssignmentChange(assignmentId) {
-    // Finde das Assignment-Objekt
-    const assignment = setAssignments.find(sa => sa._id === assignmentId);
-    
-    // Prüfe ob es "Freie Verfügbarkeit" ist (kein Assignment oder leer)
-    const isFreieVerfügbarkeit = !assignment || (assignment.name?.de === "Freie Verfügbarkeit");
-    
-    if (isFreieVerfügbarkeit) {
-      // Wenn "Freie Verfügbarkeit" ausgewählt wird, alle anderen deaktivieren
-      setSelectedSetAssignments([]);
-    } else {
-      // Normale Assignment-Logik
-      if (selectedSetAssignments.includes(assignmentId)) {
-        // Assignment entfernen
-        setSelectedSetAssignments(prev => prev.filter(id => id !== assignmentId));
-      } else {
-        // Assignment hinzufügen
-        setSelectedSetAssignments(prev => [...prev, assignmentId]);
-      }
-    }
-  }
+
 
   function checkProductValidation(productId) {
     const product = editableProducts.find(p => p.id === productId);
@@ -498,9 +474,11 @@ export default function SetKopieren() {
         set_relation: originalSet.set_relation._id
       };
 
-      // Set-Gruppen nur hinzufügen wenn welche ausgewählt sind
-      if (selectedSetAssignments.length > 0) {
-        setData.set_assignment = JSON.stringify(selectedSetAssignments);
+      // Verfügbarkeit: "free" = null, "restricted" = []
+      if (availabilityType === "free") {
+        setData.set_assignment = "null";
+      } else {
+        setData.set_assignment = "[]";
       }
 
       // Neues Set erstellen
@@ -617,17 +595,14 @@ export default function SetKopieren() {
         setMessage(`Set erstellt, aber ${errors.length} Produkt(e) konnten nicht erstellt werden:\n${errors.join('\n')}\n\nErfolgreich: ${createdProducts} von ${editableProducts.length} Produkten`);
         setMessageColor("orange");
       } else {
-        const setAssignmentInfo = selectedSetAssignments.length === 0 ? 
+        const availabilityInfo = availabilityType === "free" ? 
           "Freie Verfügbarkeit" : 
-          selectedSetAssignments.map(id => {
-            const assignment = setAssignments.find(sa => sa._id === id);
-            return assignment ? (assignment.name?.de || assignment.name) : id;
-          }).join(', ');
+          "Eingeschränkte Verfügbarkeit";
         
         if (editableProducts.length > 0) {
-          setMessage(`Set erfolgreich kopiert! Neues Set: ${originalSet.manufacturer?.name} - ${originalSet.set_name?.name?.de} - Set ${newSetNumber}. Alle ${createdProducts} Produkte erfolgreich erstellt.\n\nSet-Zuordnung: ${setAssignmentInfo}`);
+          setMessage(`Set erfolgreich kopiert! Neues Set: ${originalSet.manufacturer?.name} - ${originalSet.set_name?.name?.de} - Set ${newSetNumber}. Alle ${createdProducts} Produkte erfolgreich erstellt.\n\nVerfügbarkeit: ${availabilityInfo}`);
         } else {
-          setMessage(`Set erfolgreich kopiert! Neues Set: ${originalSet.manufacturer?.name} - ${originalSet.set_name?.name?.de} - Set ${newSetNumber} (ohne Produkte).\n\nSet-Zuordnung: ${setAssignmentInfo}`);
+          setMessage(`Set erfolgreich kopiert! Neues Set: ${originalSet.manufacturer?.name} - ${originalSet.set_name?.name?.de} - Set ${newSetNumber} (ohne Produkte).\n\nVerfügbarkeit: ${availabilityInfo}`);
         }
         setMessageColor("green");
       }
@@ -721,70 +696,64 @@ export default function SetKopieren() {
                   <Text className="text-gray-900">{originalSet.category?.name?.de}</Text>
                 </div>
                 <div className="md:col-span-2">
-                  <Text className="font-medium text-gray-600 text-sm">Set-Zuordnung</Text>
+                  <Text className="font-medium text-gray-600 text-sm">Verfügbarkeit</Text>
                   <Text className="text-gray-900">
-                    {selectedSetAssignments.length === 0 ? (
+                    {availabilityType === "free" ? (
                       <span className="italic text-gray-500">Freie Verfügbarkeit</span>
                     ) : (
-                      selectedSetAssignments.map(assignmentId => {
-                        const assignment = setAssignments.find(sa => sa._id === assignmentId);
-                        return assignment ? (assignment.name?.de || assignment.name) : assignmentId;
-                      }).join(', ')
+                      <span className="italic text-gray-500">Eingeschränkte Verfügbarkeit</span>
                     )}
                   </Text>
                 </div>
               </div>
 
-              {/* Set-Gruppen Auswahl */}
+              {/* Verfügbarkeit Auswahl */}
               <div className="mt-6">
-                <Heading level={3} className="mb-4">🎯 Set-Zuordnung bearbeiten</Heading>
+                <Heading level={3} className="mb-4">🎯 Verfügbarkeit bearbeiten</Heading>
                 <Fieldset className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="mb-4">
+                  <div className="space-y-3">
                     <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-md transition-colors ${
-                      selectedSetAssignments.length === 0 
+                      availabilityType === "free" 
                         ? "bg-blue-50 border-2 border-blue-500" 
                         : "bg-white border border-gray-300 hover:bg-gray-50"
                     }`}>
-                      <Checkbox
-                        checked={selectedSetAssignments.length === 0}
-                        onChange={() => setSelectedSetAssignments([])}
+                      <input
+                        type="radio"
+                        name="availability"
+                        value="free"
+                        checked={availabilityType === "free"}
+                        onChange={(e) => setAvailabilityType(e.target.value)}
+                        className="h-4 w-4 text-blue-500 border-gray-300 focus:ring-blue-500"
                       />
                       <div className="flex-1">
                         <Text className="font-medium">Freie Verfügbarkeit</Text>
                         <Text className="text-sm text-gray-500">(für alle Benutzer sichtbar)</Text>
                       </div>
                     </label>
-                  </div>
-                  
-                  {setAssignments.length > 0 && (
-                    <div>
-                      <Text className="mb-2 font-medium text-gray-700">
-                        Oder spezifische Zuordnungen wählen:
-                      </Text>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-2 border border-gray-200 rounded-md bg-white">
-                        {setAssignments.map(assignment => (
-                          <label
-                            key={assignment._id}
-                            className={`flex items-center gap-2 cursor-pointer p-2 rounded-md text-sm transition-colors ${
-                              selectedSetAssignments.includes(assignment._id)
-                                ? "bg-blue-50 border border-blue-500"
-                                : "hover:bg-gray-50"
-                            }`}
-                          >
-                            <Checkbox
-                              checked={selectedSetAssignments.includes(assignment._id)}
-                              onChange={() => handleSetAssignmentChange(assignment._id)}
-                            />
-                            <Text className="text-sm">{assignment.name?.de || assignment.name}</Text>
-                          </label>
-                        ))}
+                    
+                    <label className={`flex items-center gap-3 cursor-pointer p-3 rounded-md transition-colors ${
+                      availabilityType === "restricted" 
+                        ? "bg-blue-50 border-2 border-blue-500" 
+                        : "bg-white border border-gray-300 hover:bg-gray-50"
+                    }`}>
+                      <input
+                        type="radio"
+                        name="availability"
+                        value="restricted"
+                        checked={availabilityType === "restricted"}
+                        onChange={(e) => setAvailabilityType(e.target.value)}
+                        className="h-4 w-4 text-blue-500 border-gray-300 focus:ring-blue-500"
+                      />
+                      <div className="flex-1">
+                        <Text className="font-medium">Eingeschränkte Verfügbarkeit</Text>
+                        <Text className="text-sm text-gray-500">(nur für berechtigte Benutzer)</Text>
                       </div>
-                    </div>
-                  )}
+                    </label>
+                  </div>
                   
                   <Text className="mt-3 text-xs text-gray-500 italic">
                     💡 Sets mit "Freie Verfügbarkeit" sind für alle Benutzer sichtbar. 
-                    Sets mit spezifischen Zuordnungen sind nur für Benutzer mit entsprechenden Berechtigung sichtbar.
+                    Sets mit "Eingeschränkte Verfügbarkeit" sind nur für berechtigte Benutzer sichtbar.
                   </Text>
                 </Fieldset>
               </div>

@@ -19,7 +19,7 @@ export default function SetBezeichnungen() {
         const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`);
         const data = await res.json();
         // Sortiere nach deutschem Namen
-        data.sort((a, b) => a.name.de.localeCompare(b.name.de, 'de', { sensitivity: 'base' }));
+        data.sort((a, b) => (a.name?.de || '').localeCompare(b.name?.de || '', 'de', { sensitivity: 'base' }));
         setSets(data);
         setLoading(false);
     }
@@ -135,17 +135,17 @@ export default function SetBezeichnungen() {
                             <div className="space-y-3" id="setNameList">
                                 {sets.map(set => (
                                     <div key={set._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                                        <span className="text-lg font-medium text-gray-900">{set.name.de}</span>
+                                        <span className="text-lg font-medium text-gray-900">{set.name?.de}</span>
                                         <div className="flex gap-2">
                                             <Button 
-                                                onClick={() => updateSetName(set._id, set.name.de)}
+                                                onClick={() => updateSetName(set._id, set.name?.de)}
                                                 className="bg-orange-500 hover:bg-orange-600 text-black p-2 rounded-md transition-colors"
                                                 title="Bearbeiten"
                                             >
                                                 <PencilIcon className="h-4 w-4" />
                                             </Button>
                                             <Button 
-                                                onClick={() => deleteSetName(set._id, set.name.de)}
+                                                onClick={() => deleteSetName(set._id, set.name?.de)}
                                                 className="bg-red-500 hover:bg-red-600 text-black p-2 rounded-md transition-colors"
                                                 title="Löschen"
                                             >

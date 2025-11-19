@@ -132,6 +132,15 @@ const SetGruppe = () => {
       
       // Verfügbare Sets (ohne diese Verfügbarkeit)
       const available = setsData.filter(set => {
+        // Entsprechend den Regeln: Nur Sets mit set_assignment != null sind für Set-Gruppen verfügbar
+        // null = frei zugänglich für alle (nicht einschränkbar)
+        // [] = eingeschränkt verfügbar (aber noch nicht zugeordnet) - VERFÜGBAR
+        // [ObjectID,...] = eingeschränkt verfügbar mit Zuordnung - VERFÜGBAR wenn nicht bereits diese Assignment
+        if (set.set_assignment === null) {
+          return false; // Null-Sets sind frei für alle und nicht einschränkbar
+        }
+        
+        // Leeres Array = eingeschränkt aber noch nicht zugeordnet
         if (!set.set_assignment || set.set_assignment.length === 0) return true;
         
         // set_assignment ist ein Array von ObjectIds oder Strings
@@ -343,12 +352,19 @@ const SetGruppe = () => {
         const formData = new FormData();
         formData.append('set_assignment', JSON.stringify(updatedAssignments));
 
+        console.log('Sending FormData with set_assignment:', JSON.stringify(updatedAssignments));
+
         const response = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets/${setId}`, {
           method: "PUT",
           body: formData
         });
 
-        if (!response.ok) throw new Error("Fehler beim Hinzufügen des Sets");
+        console.log('Response status:', response.status);
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Server error:', errorText);
+          throw new Error(`Fehler beim Hinzufügen des Sets: ${response.status} - ${errorText}`);
+        }
 
         // Listen aktualisieren - direkt die neuen Daten holen
         const setsResponse = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/sets`);

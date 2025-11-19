@@ -313,7 +313,7 @@ export default function AuftragAnlegen() {
                     }));
                   }}
                 />
-                {"Set " + set.set_number}: {set.set_name?.name.de || set._id}
+                {"Set " + set.set_number}: {set.set_name?.name?.de || set._id}
               </label>
             ))}
           </div>

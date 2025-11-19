@@ -10,7 +10,6 @@ export default function SetAnlegen() {
   const [setNames, setSetNames] = useState([]);
   const [categories, setCategories] = useState([]);
   const [setStates, setSetStates] = useState([]);
-  const [setAssignments, setSetAssignments] = useState([]);
   const [setRelations, setSetRelations] = useState([]); // NEU
 
   // Auswahl-States
@@ -22,7 +21,7 @@ export default function SetAnlegen() {
   const token = useAuth(state => state.token);
   const [category, setCategory] = useState("");
   const [setState, setSetState] = useState("");
-  const [setAssignment, setSetAssignment] = useState([]);
+  const [availabilityType, setAvailabilityType] = useState("free"); // "free" für null, "restricted" für []
   const [setRelation, setSetRelation] = useState(""); // NEU
   const [setNumber, setSetNumber] = useState("");
   const [notePublic, setNotePublic] = useState("");
@@ -35,17 +34,14 @@ export default function SetAnlegen() {
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [showSetNameModal, setShowSetNameModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showSetAssignmentModal, setShowSetAssignmentModal] = useState(false);
 
   // Modal Inputs
   const [newBrandName, setNewBrandName] = useState("");
   const [newSetName, setNewSetName] = useState("");
   const [newCategoryName, setNewCategoryName] = useState("");
-  const [newSetAssignmentName, setNewSetAssignmentName] = useState("");
   const [brandModalMessage, setBrandModalMessage] = useState("");
   const [setNameModalMessage, setSetNameModalMessage] = useState("");
   const [categoryModalMessage, setCategoryModalMessage] = useState("");
-  const [setAssignmentModalMessage, setSetAssignmentModalMessage] = useState("");
 
   // Feedback
   const [message, setMessage] = useState("");
@@ -62,23 +58,7 @@ export default function SetAnlegen() {
     return (name || "").toLowerCase().replace(/\s+/g, "");
   }
 
-  // Set-Gruppen Multi-Select Handler
-  const handleSetAssignmentChange = (assignmentId) => {
-    if (assignmentId === "") {
-      // "Freie Verfügbarkeit" selected - clear all others
-      setSetAssignment([]);
-    } else {
-      const currentAssignments = setAssignment || [];
-      
-      if (currentAssignments.includes(assignmentId)) {
-        // Remove if already selected
-        setSetAssignment(currentAssignments.filter(id => id !== assignmentId));
-      } else {
-        // Add to selection, but first remove "Freie Verfügbarkeit" (empty string)
-        setSetAssignment([...currentAssignments.filter(id => id !== ""), assignmentId]);
-      }
-    }
-  };
+
 
   // Files laden
   useEffect(() => {
@@ -120,7 +100,6 @@ export default function SetAnlegen() {
     authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-names`).then(r => r.json()).then(data => setSetNames(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
     authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/categories`).then(r => r.json()).then(data => setCategories(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
     authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-states`).then(r => r.json()).then(data => setSetStates(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
-    authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`).then(r => r.json()).then(data => setSetAssignments(data.sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }))));
   }, []);
 
   // Set-Nummer automatisch aktualisieren
@@ -150,9 +129,14 @@ export default function SetAnlegen() {
     const formData = new FormData();
     formData.append("manufacturer", brand);
     formData.append("setName", setName);
-    if (setAssignment && setAssignment.length > 0) {
-      formData.append("set_assignment", JSON.stringify(setAssignment));
+    
+    // Verfügbarkeit: "free" = null, "restricted" = []
+    if (availabilityType === "free") {
+      formData.append("set_assignment", "null");
+    } else {
+      formData.append("set_assignment", "[]");
     }
+    
     formData.append("category", category);
     formData.append("set_number", setNumber);
     formData.append("insurance_value", null);
@@ -172,7 +156,7 @@ export default function SetAnlegen() {
     if (res.ok) {
       setMessage("Set erfolgreich angelegt.");
       setMessageColor("green");
-      setBrand(""); setSetName(""); setSetAssignment([]); setCategory(""); setSetNumber("");
+      setBrand(""); setSetName(""); setAvailabilityType("free"); setCategory(""); setSetNumber("");
       setNotePublic(""); setNotePrivate(""); setSetState(""); setThumbnails([]); setManuals([]); setSetRelation("");
       if (thumbnailRef.current) thumbnailRef.current.value = "";
       if (manualRef.current) manualRef.current.value = "";
@@ -261,33 +245,7 @@ export default function SetAnlegen() {
     setCategoryModalMessage("");
   }
 
-  // Set-Zuordnung hinzufügen
-  async function addSetAssignment() {
-    if (!newSetAssignmentName.trim()) {
-      setSetAssignmentModalMessage("Bitte gib einen Namen ein.");
-      return;
-    }
-    if (setAssignments.some(a => normalizeName(a.name?.de) === normalizeName(newSetAssignmentName))) {
-      setSetAssignmentModalMessage("Set-Gruppe existiert bereits.");
-      return;
-    }
-    const res = await authenticatedFetch(`${MAIN_VARIABLES.SERVER_URL}/api/set-assignments`, {
-      method: "POST",
-      body: JSON.stringify({ name: { de: newSetAssignmentName.trim() } }),
-    });
-    if (!res.ok) {
-      setSetAssignmentModalMessage("Fehler beim Hinzufügen.");
-      return;
-    }
-    const newAssignment = await res.json();
-    const sortedAssignments = [...setAssignments, newAssignment].sort((a, b) => (a.name?.de || "").localeCompare(b.name?.de || "", "de", { sensitivity: "base" }));
-    setSetAssignments(sortedAssignments);
-    // Neue Set-Gruppe automatisch auswählen
-    setSetAssignment([newAssignment._id]);
-    setShowSetAssignmentModal(false);
-    setNewSetAssignmentName("");
-    setSetAssignmentModalMessage("");
-  }
+
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -509,42 +467,34 @@ export default function SetAnlegen() {
 
               {/* Verfügbarkeit */}
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-900">Verfügbarkeit / Set-Gruppen</label>
-                  <Button 
-                    type="button" 
-                    onClick={() => setShowSetAssignmentModal(true)} 
-                    className="bg-orange-500 hover:bg-orange-600 text-black px-3 py-2 rounded-md transition-colors"
-                    title="Neue Set-Gruppe hinzufügen"
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="border border-gray-300 rounded-md p-3 bg-white">
-                  <div className="mb-2">
+                <label className="block text-sm font-medium text-gray-900 mb-2">Verfügbarkeit</label>
+                <div className="border border-gray-300 rounded-md p-3 bg-white space-y-2">
+                  <div>
                     <label className="flex items-center text-sm">
                       <input
-                        type="checkbox"
-                        checked={!setAssignment || setAssignment.length === 0}
-                        onChange={() => handleSetAssignmentChange("")}
-                        className="mr-2 h-4 w-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                        type="radio"
+                        name="availability"
+                        value="free"
+                        checked={availabilityType === "free"}
+                        onChange={(e) => setAvailabilityType(e.target.value)}
+                        className="mr-2 h-4 w-4 text-orange-500 border-gray-300 focus:ring-orange-500"
                       />
                       <span className="font-medium">Freie Verfügbarkeit</span>
                     </label>
                   </div>
-                  {setAssignments.map(a => (
-                    <div key={a._id} className="mb-2">
-                      <label className="flex items-center text-sm">
-                        <input
-                          type="checkbox"
-                          checked={setAssignment && setAssignment.includes(a._id)}
-                          onChange={() => handleSetAssignmentChange(a._id)}
-                          className="mr-2 h-4 w-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
-                        />
-                        {a.name?.de || "–"}
-                      </label>
-                    </div>
-                  ))}
+                  <div>
+                    <label className="flex items-center text-sm">
+                      <input
+                        type="radio"
+                        name="availability"
+                        value="restricted"
+                        checked={availabilityType === "restricted"}
+                        onChange={(e) => setAvailabilityType(e.target.value)}
+                        className="mr-2 h-4 w-4 text-orange-500 border-gray-300 focus:ring-orange-500"
+                      />
+                      <span className="font-medium">Eingeschränkte Verfügbarkeit</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
@@ -642,33 +592,7 @@ export default function SetAnlegen() {
             </div>
           )}
 
-          {showSetAssignmentModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white rounded-lg shadow-lg p-6 min-w-96">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Neue Set-Gruppe hinzufügen</h3>
-                <input
-                  type="text"
-                  value={newSetAssignmentName}
-                  onChange={e => setNewSetAssignmentName(e.target.value)}
-                  placeholder="Set-Gruppen Name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                />
-                <div className="flex gap-3 mt-4">
-                  <Button onClick={addSetAssignment} className="bg-orange-500 hover:bg-orange-600 text-black px-4 py-2 rounded-md transition-colors">
-                    Speichern
-                  </Button>
-                  <Button onClick={() => {
-                    setShowSetAssignmentModal(false);
-                    setNewSetAssignmentName("");
-                    setSetAssignmentModalMessage("");
-                  }} className="bg-black hover:bg-gray-800 text-orange-500 px-4 py-2 rounded-md transition-colors">
-                    Abbrechen
-                  </Button>
-                </div>
-                {setAssignmentModalMessage && <p className="mt-4 text-red-600">{setAssignmentModalMessage}</p>}
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
     </div>

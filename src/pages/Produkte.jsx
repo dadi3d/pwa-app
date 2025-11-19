@@ -271,40 +271,48 @@ export default function Produkte() {
     }
   };
 
-  // Gefilterte Sets basierend auf Suchbegriff, Kategorie und User-Set-Gruppen
-  const filteredSets = sets.filter((set) => {
-    // Set-Gruppen-Filter: 
-    // Sets ohne set_assignment (null/undefined/leere Liste) sind IMMER für alle sichtbar
+  // Hilfsfunktion um zu prüfen ob User Berechtigung für ein Set hat
+  const checkUserPermissionForSet = (set) => {
+    // Sets ohne set_assignment sind immer für alle verfügbar
     const hasNoAssignment = !set.set_assignment || 
                            (Array.isArray(set.set_assignment) && set.set_assignment.length === 0) ||
                            (typeof set.set_assignment === 'object' && Object.keys(set.set_assignment).length === 0);
     
     if (hasNoAssignment) {
-      // Kein Filter für Sets ohne Assignment oder mit leerer Assignment - immer anzeigen
-    } else {
-      // Sets mit set_assignment: Prüfe ob User die entsprechenden Assignments hat
-      if (userSetAssignments.length > 0) {
-        const userAssignmentIds = userSetAssignments.map(assignment => assignment._id);
-        
-        // set_assignment ist jetzt ein Array - prüfe Überschneidung
-        const setAssignmentIds = Array.isArray(set.set_assignment) 
-          ? set.set_assignment.map(sa => sa._id || sa)
-          : [set.set_assignment._id || set.set_assignment];
-        
-        // Prüfe ob mindestens eine Set-Gruppe mit User-Set-Gruppen übereinstimmt
-        const hasMatchingAssignment = setAssignmentIds.some(saId => 
-          userAssignmentIds.includes(saId)
-        );
-        
-        if (!hasMatchingAssignment) {
-          return false;
-        }
-      } else {
-        // Benutzer hat keine Set-Gruppen, aber Set hat Set-Gruppen zugewiesen -> nicht anzeigen
-        return false;
-      }
+      return { hasPermission: true, reason: 'no_assignment' };
     }
-    
+
+    // Wenn User keine Assignments hat, aber Set welche erfordert -> keine Berechtigung
+    if (userSetAssignments.length === 0) {
+      return { hasPermission: false, reason: 'no_user_assignments' };
+    }
+
+    // Alle User Assignment IDs sammeln (sowohl SetGruppen als auch einzelne Sets)
+    const userAssignmentIds = userSetAssignments.map(assignment => {
+      // assignment kann sowohl SetGruppe als auch einzelnes Set sein
+      return assignment._id || assignment;
+    });
+
+    // Set Assignment IDs extrahieren
+    const setAssignmentIds = Array.isArray(set.set_assignment) 
+      ? set.set_assignment.map(sa => sa._id || sa)
+      : [set.set_assignment._id || set.set_assignment];
+
+    // Prüfe Überschneidung: 
+    // 1. User hat Set-Gruppe die dem Set zugeordnet ist
+    // 2. User hat direkten Zugang zu diesem spezifischen Set
+    const hasMatchingAssignment = setAssignmentIds.some(saId => 
+      userAssignmentIds.includes(saId)
+    ) || userAssignmentIds.includes(set._id); // Direkter Set-Zugang
+
+    return { 
+      hasPermission: hasMatchingAssignment, 
+      reason: hasMatchingAssignment ? 'has_permission' : 'no_permission' 
+    };
+  };
+
+  // Gefilterte Sets basierend auf Suchbegriff und Kategorie (ALLE Sets werden angezeigt)
+  const filteredSets = sets.filter((set) => {
     // Kategorie-Filter
     if (selectedCategory && set.category?.name?.de !== selectedCategory) {
       return false;
@@ -485,6 +493,10 @@ export default function Produkte() {
           const setName = p.set_name?.name?.de || "–";
           const thumbnailUrl = thumbnailUrls[p._id] || `${MAIN_VARIABLES.SERVER_URL}/api/images/files/images/placeholder_set.jpg?width=500&height=500&format=webp`;
           
+          // Berechtigung prüfen
+          const permissionCheck = checkUserPermissionForSet(p);
+          const hasPermission = permissionCheck.hasPermission;
+          
           // Alle Sets dieser Kombination finden
           const allSetsOfThisType = allSets.filter(set => 
             set.manufacturer?.name === p.manufacturer?.name && 
@@ -503,22 +515,33 @@ export default function Produkte() {
           // Prüfen ob dieses spezifische Set verfügbar ist
           const isThisSetAvailable = !unavailableSets.includes(p._id);
           
-          // Bestimme ob Set ausgegraut werden soll (nur wenn Datumsauswahl aktiv ist)
-          const shouldBeGreyedOut = selectedDateRange.start && selectedDateRange.end && 
-                                   (maxSetNumber === 1 && !isThisSetAvailable);
+          // Bestimme ob Set ausgegraut werden soll 
+          const shouldBeGreyedOut = !hasPermission || 
+                                   (selectedDateRange.start && selectedDateRange.end && 
+                                    (maxSetNumber === 1 && !isThisSetAvailable));
           
           return (
             <div
-              className={`w-80 bg-white rounded-xl shadow-md mb-4 transition-all duration-200 overflow-hidden relative border border-gray-200 hover:shadow-xl hover:border-orange-500 cursor-pointer group ${
-                shouldBeGreyedOut ? 'opacity-50' : ''
-              }`}
+              className={`w-80 bg-white rounded-xl shadow-md mb-4 transition-all duration-200 overflow-hidden relative border border-gray-200 ${
+                hasPermission ? 'hover:shadow-xl hover:border-orange-500 cursor-pointer' : 'cursor-not-allowed opacity-70'
+              } group`}
               key={p._id}
               id={`set-${p._id}`}
-              onClick={() => handleSetClick(p)}
+              onClick={() => hasPermission ? handleSetClick(p) : null}
             >
-              {/* Nicht verfügbar Overlay für einzelne Sets */}
-              {shouldBeGreyedOut && (
-                <div className="absolute inset-0 bg-opacity-20 flex items-center justify-center z-10">
+              {/* Berechtigung erforderlich Tag (oben rechts) */}
+              {!hasPermission && (
+                <div className="absolute top-2 right-2 z-10">
+                  <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
+                    Berechtigung erforderlich
+                  </span>
+                </div>
+              )}
+              
+              {/* Nicht verfügbar Overlay für einzelne Sets (nur wenn Berechtigung vorhanden) */}
+              {hasPermission && selectedDateRange.start && selectedDateRange.end && 
+               (maxSetNumber === 1 && !isThisSetAvailable) && (
+                <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center z-10">
                   <div className="bg-gray-600 text-white px-3 py-1 rounded-lg text-sm font-medium">
                     Nicht verfügbar
                   </div>
@@ -563,12 +586,12 @@ export default function Produkte() {
                   </div>
                 )}
               </div>
-              <div className="p-3 bg-gray-50 text-gray-800 text-sm group-hover:bg-gray-100">
+              <div className={`p-3 bg-gray-50 text-gray-800 text-sm ${hasPermission ? 'group-hover:bg-gray-100' : ''}`}>
                 <div className="mb-1">
                   <strong>Kategorie:</strong> {category}
                 </div>
                 <div className="mb-1">
-                  {selectedDateRange.start && selectedDateRange.end ? (
+                  {selectedDateRange.start && selectedDateRange.end && hasPermission ? (
                     // Wenn Datumsauswahl aktiv ist, zeige Verfügbarkeitsstatus
                     maxSetNumber === 1 && !isThisSetAvailable ? (
                       <strong className="text-red-600">0 Sets verfügbar</strong>
@@ -577,9 +600,12 @@ export default function Produkte() {
                     ) : (
                       <strong className="text-orange-600">{availableCount} von {maxSetNumber} verfügbar</strong>
                     )
-                  ) : (
-                    // Ohne Datumsauswahl zeige normale Anzahl
+                  ) : hasPermission ? (
+                    // Ohne Datumsauswahl zeige normale Anzahl (nur wenn Berechtigung vorhanden)
                     <strong>{maxSetNumber} Set{maxSetNumber !== 1 ? "s" : ""} vorhanden</strong>
+                  ) : (
+                    // Keine Berechtigung - zeige nur die Anzahl ohne Status
+                    <span className="text-gray-500">{maxSetNumber} Set{maxSetNumber !== 1 ? "s" : ""} vorhanden</span>
                   )}
                 </div>
               </div>
