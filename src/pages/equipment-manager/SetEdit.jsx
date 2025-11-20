@@ -21,6 +21,7 @@ const SetEdit = ({ setId: propSetId }) => {
   const [saving, setSaving] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [products, setProducts] = useState([]);
+  const [availabilityType, setAvailabilityType] = useState("free"); // "free" für null, "restricted" für []
 
   // Referenzdaten
   const [brands, setBrands] = useState([]);
@@ -80,6 +81,16 @@ const SetEdit = ({ setId: propSetId }) => {
                     : [],
             set_relation: data.set_relation?._id || data.set_relation,
         });
+        
+        // Verfügbarkeitstyp setzen basierend auf set_assignment
+        if (!data.set_assignment || data.set_assignment === null) {
+            setAvailabilityType("free");
+        } else if (Array.isArray(data.set_assignment) && data.set_assignment.length === 0) {
+            setAvailabilityType("restricted");
+        } else {
+            setAvailabilityType("restricted"); // Falls Zuordnungen vorhanden sind
+        }
+        
         setLoading(false);
         });
     // Produkte laden
@@ -191,27 +202,15 @@ async function handleSetThumbnail(fileId) {
         setSetData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSetAssignmentChange = (assignmentId) => {
-        setSetData(prev => {
-            let newAssignments;
-            
-            if (assignmentId === "") {
-                // "Freie Verfügbarkeit" selected - clear all others
-                newAssignments = [];
-            } else {
-                const currentAssignments = prev.set_assignment || [];
-                
-                if (currentAssignments.includes(assignmentId)) {
-                    // Remove if already selected
-                    newAssignments = currentAssignments.filter(id => id !== assignmentId);
-                } else {
-                    // Add to selection, but first remove "Freie Verfügbarkeit" (empty string)
-                    newAssignments = [...currentAssignments.filter(id => id !== ""), assignmentId];
-                }
-            }
-            
-            return { ...prev, set_assignment: newAssignments };
-        });
+    const handleAvailabilityChange = (type) => {
+        setAvailabilityType(type);
+        if (type === "free") {
+            // Freie Verfügbarkeit = null
+            setSetData(prev => ({ ...prev, set_assignment: null }));
+        } else {
+            // Eingeschränkte Verfügbarkeit = leeres Array
+            setSetData(prev => ({ ...prev, set_assignment: [] }));
+        }
     };    const handleSave = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -226,10 +225,11 @@ async function handleSetThumbnail(fileId) {
     formData.append("note_private", setData.note_private || "");
     formData.append("state", setData.state);
     formData.append("insurance_value", setData.insurance_value || 0);
-    // Nur hinzufügen wenn gültige Werte vorhanden sind
-    if (setData.set_assignment && setData.set_assignment.length > 0) {
-      // Send as JSON string for array handling
-      formData.append("set_assignment", JSON.stringify(setData.set_assignment));
+    // Verfügbarkeit setzen basierend auf availabilityType
+    if (availabilityType === "free") {
+      formData.append("set_assignment", "null");
+    } else {
+      formData.append("set_assignment", "[]");
     }
     if (setData.set_relation && setData.set_relation !== 'null') {
       formData.append("set_relation", setData.set_relation);
@@ -272,6 +272,15 @@ async function handleSetThumbnail(fileId) {
                     : [],
             set_relation: data.set_relation?._id || data.set_relation,
         });
+        
+        // Verfügbarkeitstyp nach dem Speichern aktualisieren
+        if (!data.set_assignment || data.set_assignment === null) {
+            setAvailabilityType("free");
+        } else if (Array.isArray(data.set_assignment) && data.set_assignment.length === 0) {
+            setAvailabilityType("restricted");
+        } else {
+            setAvailabilityType("restricted");
+        }
         });
     // FileDatas neu laden
     authenticatedFetch(API_FILEDATA)
@@ -342,13 +351,10 @@ async function handleSetThumbnail(fileId) {
             <strong>Private Notiz:</strong> {setData.note_private || "–"}
           </div>
           <div style={{ marginBottom: 12 }}>
-            <strong>Set-Zuordnung:</strong> {
-              !setData.set_assignment || setData.set_assignment.length === 0 
+            <strong>Verfügbarkeit:</strong> {
+              !setData.set_assignment || setData.set_assignment === null
                 ? "Freie Verfügbarkeit"
-                : setData.set_assignment.map(saId => 
-                    assignments.find(a => a._id === saId)?.name?.de || 
-                    assignments.find(a => a._id === saId)?.name || saId
-                  ).join(", ")
+                : "Eingeschränkte Verfügbarkeit"
             }
           </div>
           <div style={{ marginBottom: 12 }}>
@@ -548,32 +554,34 @@ async function handleSetThumbnail(fileId) {
               <input name="note_private" value={setData.note_private || ""} onChange={handleChange} />
             </label>
             <label>
-              Set-Zuordnung:
+              Verfügbarkeit:
               <div style={{ border: "1px solid #ccc", borderRadius: 4, padding: 8, marginTop: 4 }}>
                 <div style={{ marginBottom: 8 }}>
                   <label style={{ display: "flex", alignItems: "center", fontSize: "0.9em" }}>
                     <input
-                      type="checkbox"
-                      checked={!setData.set_assignment || setData.set_assignment.length === 0}
-                      onChange={() => handleSetAssignmentChange("")}
+                      type="radio"
+                      name="availability"
+                      value="free"
+                      checked={availabilityType === "free"}
+                      onChange={(e) => handleAvailabilityChange(e.target.value)}
                       style={{ marginRight: 8 }}
                     />
                     Freie Verfügbarkeit
                   </label>
                 </div>
-                {assignments.map(a => (
-                  <div key={a._id} style={{ marginBottom: 8 }}>
-                    <label style={{ display: "flex", alignItems: "center", fontSize: "0.9em" }}>
-                      <input
-                        type="checkbox"
-                        checked={setData.set_assignment && setData.set_assignment.includes(a._id)}
-                        onChange={() => handleSetAssignmentChange(a._id)}
-                        style={{ marginRight: 8 }}
-                      />
-                      {a.name?.de || a.name}
-                    </label>
-                  </div>
-                ))}
+                <div>
+                  <label style={{ display: "flex", alignItems: "center", fontSize: "0.9em" }}>
+                    <input
+                      type="radio"
+                      name="availability"
+                      value="restricted"
+                      checked={availabilityType === "restricted"}
+                      onChange={(e) => handleAvailabilityChange(e.target.value)}
+                      style={{ marginRight: 8 }}
+                    />
+                    Eingeschränkte Verfügbarkeit
+                  </label>
+                </div>
               </div>
             </label>
             <label>

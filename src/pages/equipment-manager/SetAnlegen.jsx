@@ -450,19 +450,29 @@ export default function SetAnlegen() {
               {/* Status */}
               <div>
                 <label className="block text-sm font-medium text-gray-900 mb-2">Set-Status</label>
-                <select 
-                  value={setState} 
-                  onChange={e => setSetState(e.target.value)} 
-                  required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                >
-                  <option value="">Bitte auswählen</option>
-                  {setStates.map(s => (
-                    <option key={s._id} value={s._id}>
-                      {s.name?.de || "–"}
-                    </option>
-                  ))}
-                </select>
+                <div className="border border-gray-300 rounded-md p-3 bg-white space-y-2">
+                  {setStates
+                    .filter(s => {
+                      const name = (s.name?.de || s.name || "").toLowerCase();
+                      return name.includes("auf lager") || name.includes("nicht verfügbar");
+                    })
+                    .map(s => (
+                      <div key={s._id}>
+                        <label className="flex items-center text-sm">
+                          <input
+                            type="radio"
+                            name="setStatus"
+                            value={s._id}
+                            checked={setState === s._id}
+                            onChange={(e) => setSetState(e.target.value)}
+                            className="mr-2 h-4 w-4 text-orange-500 border-gray-300 focus:ring-orange-500"
+                          />
+                          <span className="font-medium">{s.name?.de || s.name || "–"}</span>
+                        </label>
+                      </div>
+                    ))
+                  }
+                </div>
               </div>
 
               {/* Verfügbarkeit */}
