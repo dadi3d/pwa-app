@@ -74,21 +74,22 @@ const SetEdit = ({ setId: propSetId }) => {
             set_name: data.set_name?._id || data.set_name,
             category: data.category?._id || data.category,
             state: data.state?._id || data.state,
-            set_assignment: Array.isArray(data.set_assignment) 
-                ? data.set_assignment.map(sa => sa._id || sa)
-                : (data.set_assignment?._id || data.set_assignment) 
-                    ? [data.set_assignment?._id || data.set_assignment] 
-                    : [],
+            // Behalte set_assignment unverändert für korrekte Anzeige
+            set_assignment: data.set_assignment,
             set_relation: data.set_relation?._id || data.set_relation,
         });
         
         // Verfügbarkeitstyp setzen basierend auf set_assignment
-        if (!data.set_assignment || data.set_assignment === null) {
+        console.log('Initial set_assignment:', data.set_assignment);
+        if (data.set_assignment === null || data.set_assignment === undefined) {
             setAvailabilityType("free");
         } else if (Array.isArray(data.set_assignment) && data.set_assignment.length === 0) {
             setAvailabilityType("restricted");
+        } else if (Array.isArray(data.set_assignment) && data.set_assignment.length > 0) {
+            setAvailabilityType("restricted");
         } else {
-            setAvailabilityType("restricted"); // Falls Zuordnungen vorhanden sind
+            // Fallback für andere Datentypen
+            setAvailabilityType("free");
         }
         
         setLoading(false);
@@ -229,6 +230,7 @@ async function handleSetThumbnail(fileId) {
     if (availabilityType === "free") {
       formData.append("set_assignment", "null");
     } else {
+      // Für eingeschränkte Verfügbarkeit: leeres Array als JSON-String
       formData.append("set_assignment", "[]");
     }
     if (setData.set_relation && setData.set_relation !== 'null') {
@@ -265,21 +267,22 @@ async function handleSetThumbnail(fileId) {
             set_name: data.set_name?._id || data.set_name,
             category: data.category?._id || data.category,
             state: data.state?._id || data.state,
-            set_assignment: Array.isArray(data.set_assignment) 
-                ? data.set_assignment.map(sa => sa._id || sa)
-                : (data.set_assignment?._id || data.set_assignment) 
-                    ? [data.set_assignment?._id || data.set_assignment] 
-                    : [],
+            // Behalte set_assignment unverändert für korrekte Anzeige
+            set_assignment: data.set_assignment,
             set_relation: data.set_relation?._id || data.set_relation,
         });
         
         // Verfügbarkeitstyp nach dem Speichern aktualisieren
-        if (!data.set_assignment || data.set_assignment === null) {
+        console.log('Set assignment after save:', data.set_assignment);
+        if (data.set_assignment === null || data.set_assignment === undefined) {
             setAvailabilityType("free");
         } else if (Array.isArray(data.set_assignment) && data.set_assignment.length === 0) {
             setAvailabilityType("restricted");
-        } else {
+        } else if (Array.isArray(data.set_assignment) && data.set_assignment.length > 0) {
             setAvailabilityType("restricted");
+        } else {
+            // Fallback: wenn es weder null noch Array ist
+            setAvailabilityType("free");
         }
         });
     // FileDatas neu laden
@@ -352,9 +355,11 @@ async function handleSetThumbnail(fileId) {
           </div>
           <div style={{ marginBottom: 12 }}>
             <strong>Verfügbarkeit:</strong> {
-              !setData.set_assignment || setData.set_assignment === null
+              setData.set_assignment === null || setData.set_assignment === undefined
                 ? "Freie Verfügbarkeit"
-                : "Eingeschränkte Verfügbarkeit"
+                : (Array.isArray(setData.set_assignment) && setData.set_assignment.length === 0)
+                  ? "Eingeschränkte Verfügbarkeit"
+                  : "Eingeschränkte Verfügbarkeit"
             }
           </div>
           <div style={{ marginBottom: 12 }}>
